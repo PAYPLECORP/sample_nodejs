@@ -1,0 +1,185 @@
+{% extends 'layout.html' %}
+{% block content %}
+<form id="orderForm" name="orderForm" method="post" action="/node/order_confirm">
+    <div>
+        <label for="payple_payer_id">CPAY_LIB_VER</label> <select
+            name="pcd_cpay_ver">
+        <option value="1.0.1">1.0.1</option>
+    </select>
+        <label>테스트 환경</label>
+        <select name="test_env">
+            <option value="live">live</option>
+            <option value="staging">staging</option>
+            <option value="dev">dev</option>
+        </select>
+    </div>
+    <div>
+        <select name="simple_flag">
+            <option value="N">단건결제</option>
+            <option value="Y">간편결제</option>
+        </select>
+    </div>
+    <div>
+        <select name="is_direct">
+            <option value="N">POPUP</option>
+            <option value="Y">DIRECT</option>
+        </select>
+    </div>
+    <div>
+			<span> <select id="pay_type" name="pay_type">
+					<option value="transfer">계좌이체결제</option>
+					<option value="card">신용카드</option>
+			</select>
+			</span> <span id="card_ver_view" style="display: none;"> <select
+            id="card_ver" name="card_ver">
+					<option value=''>=결제창 선택=</option>
+					<option value="01">카드 정기</option>
+					<option value="02">카드 일반</option>
+			</select>
+			</span>
+    </div>
+    <div>
+        <label for="payple_payer_id">[간편결제] 페이플 결제자 ID</label> <input
+            type="text" name="payple_payer_id" id="payple_payer_id" value="">
+    </div>
+    <div>
+        <label for="payer_no">구매자 고유번호</label> <input type="text"
+                                                      name="buyer_no" id="buyer_no" value="{{userData.buyer_no}}">
+    </div>
+    <div>
+        <label for="buyer_name">구매자 이름</label> <input type="text"
+                                                      name="buyer_name" id="buyer_name" value="{{userData.buyer_name}}">
+    </div>
+    <div>
+        <label for="buyer_hp">구매자 휴대폰번호</label> <input type="text"
+                                                       name="buyer_hp" id="buyer_hp" value="{{userData.buyer_hp}}">
+    </div>
+    <div>
+        <label for="buyer_email">구매자 Email</label> <input type="text"
+                                                          name="buyer_email" id="buyer_email"
+                                                          value="{{userData.buyer_email}}">
+    </div>
+    <div>
+        <label for="buy_goods">구매상품</label> <input type="text"
+                                                   name="buy_goods" id="buy_goods" value="{{userData.buy_goods}}">
+    </div>
+    <div>
+        <label for="buy_total">결제금액</label> <input type="text"
+                                                   name="buy_total" id="buy_total" value="{{userData.buy_total}}">
+    </div>
+    <div>
+        <label for="buy_istax">과세여부</label> <select id="buy_istax"
+                                                    name="buy_istax">
+        <option value="Y" selected>과세</option>
+        <option value="N">비과세</option>
+    </select>
+    </div>
+    <div>
+        <label for="buy_taxtotal">부가세</label> <input type="text"
+                                                     name="buy_taxtotal" id="buy_taxtotal" value="">
+    </div>
+    <div>
+        <label for="order_num">주문번호</label> <input type="text"
+                                                   name="order_num" id="order_num" value="{{userData.oid}}">
+    </div>
+    <div id="is_reguler_view">
+        <label for="is_reguler">정기결제</label> <select id="is_reguler"
+                                                     name="is_reguler">
+        <option value="N">N</option>
+        <option value="Y">Y</option>
+    </select>
+    </div>
+    <div id="pay_year_view">
+        <label for="pay_year">정기결제 구분년도</label>
+        <select id="pay_year" name="pay_year">
+            <option value="">===</option>
+            <option value='2021'>2021</option>
+            <option value='2020'>2020</option>
+            <option value='2019'>2019</option>
+        </select>
+    </div>
+    <div id="pay_month_view">
+        <label for="pay_month">정기결제 구분월</label> <select id="pay_month"
+                                                        name="pay_month">
+        <option value="">===</option>
+        <option value="12">12</option>
+        <option value="11">11</option>
+        <option value="10">10</option>
+        <option value="9">9</option>
+        <option value="8">8</option>
+        <option value="7">7</option>
+        <option value="6">6</option>
+        <option value="5">5</option>
+        <option value="4">4</option>
+        <option value="3">3</option>
+        <option value="2">2</option>
+        <option value="1">1</option>
+    </select>
+    </div>
+    <div id="taxsave_view">
+        <label for="is_taxsave">현금영수증</label> <select id="is_taxsave"
+                                                      name="is_taxsave">
+        <option value="N">N</option>
+        <option value="Y">Y</option>
+    </select>
+    </div>
+    <div>
+        <label for="work_type">결제요청방식</label> <select id="work_type"
+                                                      name="work_type">
+        <option value="CERT">결제요청->결제확인->결제완료</option>
+        <option value="PAY">결제요청->결제완료</option>
+        <option value="AUTH">인증</option>
+    </select>
+    </div>
+    <div>
+        <label for="auth_type">재결제 인증방식</label> <select id="auth_type"
+                                                        name="auth_type">
+        <option value="sms">문자</option>
+        <option value="pwd">패스워드</option>
+    </select>
+    </div>
+</form>
+<button id="orderFormSubmit">상품구매</button>
+{% endblock %}
+{% block script %}
+<script>
+    $(document).ready(function () {
+        $('#orderFormSubmit').on('click', function (e) {
+            e.preventDefault();
+
+            const form = $('#orderForm')[0];
+
+            form.submit();
+        });
+
+        //결제 타입에 따라 관련 selectTag의 css속성 변경
+        $("#pay_type").on('change', function (e) {
+
+            e.preventDefault();
+            const this_val = $(this).val();
+
+            if (this_val === 'card') {
+                $("#taxsave_view").css('display', 'none');
+                $("#card_ver_view").css('display', '');
+            } else {
+                $("#taxsave_view").css('display', '');
+                $("#card_ver_view").css('display', 'none');
+            }
+            //카드 결제유형(정기, 일반)에 따라 selectTag의 css속성 변경
+            $('#card_ver').on('change', function () {
+                if ($(this).val() === '01') {
+                    $('#is_reguler_view').css('display', '');
+                    $('#pay_year_view').css('display', '');
+                    $('#pay_month_view').css('display', '');
+                    $('#work_type option[value*="AUTH"]').prop('disabled', false);
+                } else {
+                    $('#is_reguler_view').css('display', 'none');
+                    $('#pay_year_view').css('display', 'none');
+                    $('#pay_month_view').css('display', 'none');
+                    $('#work_type option[value*="AUTH"]').prop('disabled', true);
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
