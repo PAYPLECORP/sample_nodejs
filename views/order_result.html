@@ -128,67 +128,63 @@
 
 </script>
 <div style="border: 1px solid black; width: 800px;">
-    PCD_PAY_RST = {{PCD_PAY_RST}}
+    PCD_PAY_RST = {{PCD_PAY_RST}}       <!-- 결제요청 결과(success|error) -->
     <br>
-    PCD_PAY_MSG = {{PCD_PAY_MSG}}
+    PCD_PAY_MSG = {{PCD_PAY_MSG}}       <!-- 결제요청 결과 메시지 -->
     <br>
-    PCD_PAY_OID = {{PCD_PAY_OID}}
+    PCD_PAY_OID = {{PCD_PAY_OID}}       <!-- 주문번호 -->
     <br>
-    PCD_PAY_TYPE = {{PCD_PAY_TYPE}}
+    PCD_PAY_TYPE = {{PCD_PAY_TYPE}}     <!-- 결제 방법 (transfer | card) -->
     <br>
-    PCD_PAY_WORK = {{PCD_PAY_WORK}}            <!-- 결제요청 업무구분 (CERT: 결제정보인증등록, PAY: 결제승인요청 ) -->
+    PCD_PAY_WORK = {{PCD_PAY_WORK}}     <!-- 결제요청 업무구분 (CERT: 결제정보인증등록, PAY: 결제승인요청 ) -->
     <br>
-    PCD_PAYER_ID = {{PCD_PAYER_ID}}           <!-- 결제자 고유ID (결제완료시 RETURN) -->
+    PCD_PAYER_ID = {{PCD_PAYER_ID}}     <!-- 결제자 고유ID (결제완료시 RETURN) -->
     <br>
-    PCD_PAYER_NO = {{PCD_PAYER_NO}}
+    PCD_PAYER_NO = {{PCD_PAYER_NO}}     <!-- 가맹점 회원 고유번호 -->
     {% if PCD_PAY_TYPE === 'transfer' %}
     <br>
-    PCD_PAY_BANKACCTYPE = {{PCD_PAY_BANKACCTYPE}}
+    PCD_PAY_BANKACCTYPE = {{PCD_PAY_BANKACCTYPE}}       <!--현금영수증 발행대상 (개인:personal, 사업자:company)-->
     {% endif %}
     <br>
-    PCD_PAYER_NAME = {{PCD_PAYER_NAME}}
+    PCD_PAYER_NAME = {{PCD_PAYER_NAME}}         <!-- 결제자 이름 -->
     <br>
-    PCD_PAYER_EMAIL = {{PCD_PAYER_EMAIL}}     <!-- 결제자 Email (출금결과 수신) -->
+    PCD_PAYER_EMAIL = {{PCD_PAYER_EMAIL}}       <!-- 결제자 Email (출금결과 수신) -->
     <br>
-    PCD_REGULER_FLAG = {{PCD_REGULER_FLAG}}    <!-- 정기결제 Y|N -->
+    PCD_REGULER_FLAG = {{PCD_REGULER_FLAG}}     <!-- 정기결제 Y|N -->
     <br>
-    PCD_PAY_YEAR = {{PCD_PAY_YEAR}}            <!-- 정기결제 구분 년도 -->
+    PCD_PAY_YEAR = {{PCD_PAY_YEAR}}             <!-- 정기결제 구분 년도 -->
     <br>
-    PCD_PAY_MONTH = {{PCD_PAY_MONTH}}            <!-- 정기결제 구분 월 -->
+    PCD_PAY_MONTH = {{PCD_PAY_MONTH}}           <!-- 정기결제 구분 월 -->
     <br>
-    PCD_PAY_GOODS = {{PCD_PAY_GOODS}}
+    PCD_PAY_GOODS = {{PCD_PAY_GOODS}}           <!-- 결제 상품 -->
     <br>
-    PCD_PAY_TOTAL = {{PCD_PAY_TOTAL}}
+    PCD_PAY_TOTAL = {{PCD_PAY_TOTAL}}           <!-- 결제 금액-->
     <br>
-    {% if PCD_PAY_TYPE === 'card' %}
-    PCD_PAY_TAXTOTAL = {{PCD_PAY_TAXTOTAL}}   <!-- 부가세 (복합과세 경우) -->
+    {% if PCD_PAY_TYPE == 'card' %}
+    PCD_PAY_TAXTOTAL = {{ PCD_PAY_TAXTOTAL }}   <!-- 부가세 (복합과세 경우) -->
     <br>
-    PCD_PAY_ISTAX = {{PCD_PAY_ISTAX}}            <!-- 과세여부 (과세:Y 비과세(면세):N) -->
-    {% endif %}
-    {% if PCD_PAY_TYPE === 'transfer' %}
+    PCD_PAY_ISTAX = {{ PCD_PAY_ISTAX }}         <!-- 과세여부 (과세:Y 비과세(면세):N) -->
     <br>
-    PCD_PAY_BANK = {{PCD_PAY_BANK}}
+    PCD_PAY_CARDNAME = {{ PCD_PAY_CARDNAME }}   <!-- 카드사명 -->
     <br>
-    PCD_PAY_BANKNAME = {{PCD_PAY_BANKNAME}}
+    PCD_PAY_CARDNUM = {{ PCD_PAY_CARDNUM }}     <!-- 카드번호 -->
     <br>
-    PCD_PAY_BANKNUM = {{PCD_PAY_BANKNUM}}
-    {% endif %}
-    {% if PCD_PAY_TYPE === 'card' %}
+    PCD_PAY_CARDTRADENUM = {{ PCD_PAY_CARDTRADENUM }}       <!-- 카드결제 거래번호 -->
     <br>
-    PCD_PAY_CARDNAME = {{PCD_PAY_CARDNAME}}    <!-- 카드사명 -->
+    PCD_PAY_CARDAUTHNO = {{ PCD_PAY_CARDAUTHNO }}           <!-- 카드결제 승인번호 -->
     <br>
-    PCD_PAY_CARDNUM = {{PCD_PAY_CARDNUM}}    <!-- 카드번호 -->
+    PCD_PAY_CARDRECEIPT = {{ PCD_PAY_CARDRECEIPT }}         <!-- 카드전표 URL -->
+    {% elif PCD_PAY_TYPE == 'transfer' %}
+    PCD_PAY_BANK = {{ PCD_PAY_BANK }}               <!-- 은행코드 -->
     <br>
-    PCD_PAY_CARDTRADENUM = {{PCD_PAY_CARDTRADENUM}}    <!-- 카드결제 거래번호 -->
+    PCD_PAY_BANKNAME = {{ PCD_PAY_BANKNAME }}       <!-- 은행명 -->
     <br>
-    PCD_PAY_CARDAUTHNO = {{PCD_PAY_CARDAUTHNO}} <!-- 카드결제 승인번호 -->
-    <br>
-    PCD_PAY_CARDRECEIPT = {{PCD_PAY_CARDRECEIPT}}     <!-- 카드전표 URL -->
+    PCD_PAY_BANKNUM = {{ PCD_PAY_BANKNUM }}         <!-- 계좌번호(중간 6자리 * 처리) -->
     {% endif %}
     <br>
-    PCD_PAY_TIME = {{PCD_PAY_TIME}}
+    PCD_PAY_TIME = {{ PCD_PAY_TIME }}               <!-- 결제 시간 (format: yyyyMMddHHmmss, ex: 20210610142219) -->
     <br>
-    PCD_TAXSAVE_RST = {{PCD_TAXSAVE_RST}}        <!-- 현금영수증 발행결과 Y|N -->
+    PCD_TAXSAVE_RST = {{ PCD_TAXSAVE_RST }}         <!-- 현금영수증 발행결과 Y|N -->
 </div>
 
 <div style="width: 800px; height: 20px">&nbsp;</div>

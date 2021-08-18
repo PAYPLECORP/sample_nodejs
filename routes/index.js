@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const {post} = require('axios');
-const url = require('url');
+
 /*
  * GET /, order.html 렌더링
  */
@@ -105,26 +105,42 @@ router.post('/auth', (req, res, next) => {
  */
 router.post('/result', (req, res) => {
     const data = {
-        PCD_PAY_RST: req.body.PCD_PAY_RST,            // 결제결과
-        PCD_PAY_MSG: req.body.PCD_PAY_MSG,            // 결제결과 메시지
-        PCD_PAY_OID: req.body.PCD_PAY_OID,            // 주문번호
-        PCD_PAY_TYPE: req.body.PCD_PAY_TYPE,          // 결제 방법 (transfer | card)
-        PCD_PAY_WORK: req.body.PCD_PAY_WORK,          // 결제요청 업무구분 (AUTH : 본인인증+계좌등록, CERT: 본인인증+계좌등록+결제요청등록(최종 결제승인요청 필요), PAY: 본인인증+계좌등록+결제완료)
-        PCD_PAYER_ID: req.body.PCD_PAYER_ID,          // 결제자 고유ID
-        PCD_PAYER_NO: req.body.PCD_PAYER_NO,          // 가맹점 회원 고유번호
-        PCD_PAYER_EMAIL: req.body.PCD_PAYER_EMAIL,    // 결제자 Email
+        PCD_PAY_RST: req.body.PCD_PAY_RST,  // 결제요청 결과(success|error)
+        PCD_PAY_MSG: req.body.PCD_PAY_MSG,  // 결제요청 결과 메시지
+        PCD_PAY_WORK: req.body.PCD_PAY_WORK,
+        // 결제요청 업무구분 (AUTH : 본인인증+계좌등록, CERT: 본인인증+계좌등록+결제요청등록(최종 결제승인요청 필요), PAY: 본인인증+계좌등록+결제완료)
+        PCD_AUTH_KEY: req.body.PCD_AUTH_KEY,  // 결제용 인증키
+        PCD_PAY_REQKEY: req.body.PCD_PAY_REQKEY,  // 결제요청 고유 KEY
+        PCD_PAY_COFURL: req.body.PCD_PAY_COFURL,  // 결제승인요청 URL
+        PCD_PAY_OID: req.body.PCD_PAY_OID,  // 주문번호
+        PCD_PAY_TYPE: req.body.PCD_PAY_TYPE,  // 결제 방법 (transfer | card)
+        PCD_PAYER_ID: req.body.PCD_PAYER_ID,  // 카드등록 후 리턴받은 빌링키
+        PCD_PAYER_NO: req.body.PCD_PAYER_NO,  // 가맹점 회원 고유번호
+        PCD_PAY_GOODS: req.body.PCD_PAY_GOODS,  // 결제 상품
+        PCD_PAY_TOTAL: req.body.PCD_PAY_TOTAL,  // 결제 금액
+        PCD_PAY_TAXTOTAL: req.body.PCD_PAY_TAXTOTAL,
+        // 복합과세(과세+면세) 주문건에 필요한 금액이며 가맹점에서 전송한 값을 부가세로 설정합니다. 과세 또는 비과세의 경우 사용하지 않습니다.
+        PCD_PAY_ISTAX: req.body.PCD_PAY_ISTAX,  // 과세설정 (Default: Y, 과세:Y, 복합과세:Y, 비과세: N)
+        PCD_PAYER_EMAIL: req.body.PCD_PAYER_EMAIL,  // 결제자 Email
+        PCD_PAY_YEAR: req.body.PCD_PAY_YEAR,  // 결제 구분 년도 (PCD_REGULER_FLAG 사용시 응답)
+        PCD_PAY_MONTH: req.body.PCD_PAY_MONTH,  // 결제 구분 월 (PCD_REGULER_FLAG 사용시 응답)
+        PCD_PAY_TIME: req.body.PCD_PAY_TIME,  // 결제 시간 (format: yyyyMMddHHmmss, ex: 20210610142219)
         PCD_REGULER_FLAG: req.body.PCD_REGULER_FLAG,  // 정기결제 여부 (Y | N)
-        PCD_PAY_YEAR: req.body.PCD_PAY_YEAR,          // [정기결제] 구분 년도
-        PCD_PAY_MONTH: req.body.PCD_PAY_MONTH,        // [정기결제] 결제 구분 월
-        PCD_PAY_GOODS: req.body.PCD_PAY_GOODS,        // 결제 상품
-        PCD_PAY_TOTAL: req.body.PCD_PAY_TOTAL,        // 결제 금액
-        PCD_PAY_TIME: req.body.PCD_PAY_TIME,          // 결제 시간
-        PCD_TAXSAVE_RST: req.body.PCD_TAXSAVE_RST,    // 현금영수증 발행결과 (Y | N)
-        PCD_AUTH_KEY: req.body.PCD_AUTH_KEY,          // 결제용 인증키
-        PCD_PAY_REQKEY: req.body.PCD_PAY_REQKEY,      // 결제요청 고유KEY
-        PCD_PAY_COFURL: req.body.PCD_PAY_COFURL       // 결제승인요청 URL
+        PCD_TAXSAVE_RST: req.body.PCD_TAXSAVE_RST,  // 현금영수증 발행결과 (Y | N)
+        PCD_PAYER_NAME: req.body.PCD_PAYER_NAME   // 결제자 이름
     };
 
+    if (data.PCD_PAY_TYPE === 'transfer') {
+        data.PCD_PAY_BANK = req.body.PCD_PAY_BANK;   // [계좌결제] 은행코드
+        data.PCD_PAY_BANKNAME = req.body.PCD_PAY_BANKNAME;   // [계좌결제] 은행코드
+        data.PCD_PAY_BANKNUM = req.body.PCD_PAY_BANKNUM;  // [계좌결제] 계좌번호(중간 6자리 * 처리)
+    } else if (data.PCD_PAY_TYPE === 'card') {
+        data.PCD_PAY_CARDNAME = req.body.PCD_PAY_CARDNAME;  // [카드결제] 카드사명
+        data.PCD_PAY_CARDNUM = req.body.PCD_PAY_CARDNUM;  // [카드결제] 카드번호 (ex: 1234-****-****-5678)
+        data.PCD_PAY_CARDTRADENUM = req.body.PCD_PAY_CARDTRADENUM;  // [카드결제] 카드결제 거래번호
+        data.PCD_PAY_CARDAUTHNO = req.body.PCD_PAY_CARDAUTHNO;  // [카드결제] 카드결제 승인번호
+        data.PCD_PAY_CARDRECEIPT = req.body.PCD_PAY_CARDRECEIPT;  // [카드결제] 카드전표 URL
+    }
     res.render('order_result', data);
 });
 
@@ -179,7 +195,7 @@ router.post('/refund', (req, res) => {
         post(refundURL, JSON.stringify(params), {
             headers: {
                 'content-type': 'application/json',
-                'referer': process.env.PCD_HTTP_REFERER    //API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
+                'referer': process.env.PCD_HTTP_REFERER    // API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
             }
         })
             .then(r2 => res.json({...r2.data}))
@@ -212,7 +228,7 @@ router.post('/taxsaveReg', (req, res) => {
         post(taxSaveURL, JSON.stringify(params), {
             headers: {
                 'content-type': 'application/json',
-                'referer': process.env.PCD_HTTP_REFERER  //API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
+                'referer': process.env.PCD_HTTP_REFERER  // API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
             }
         })
             .then(r2 => {
@@ -245,7 +261,7 @@ router.post('/taxsaveCan', (req, res) => {
         post(cancelURL, JSON.stringify(params), {
             headers: {
                 'content-type': 'application/json',
-                'referer': process.env.PCD_HTTP_REFERER  //API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
+                'referer': process.env.PCD_HTTP_REFERER  // API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
             }
         })
             .then(r2 => {
@@ -280,7 +296,7 @@ router.post('/paycheck', (req, res) => {
         post(paycheckURL, JSON.stringify(params), {
             headers: {
                 'content-type': 'application/json',
-                'referer': process.env.PCD_HTTP_REFERER  //API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
+                'referer': process.env.PCD_HTTP_REFERER  // API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
             }
         })
             .then(r2 => {
@@ -324,7 +340,7 @@ router.post('/transferSimple', (req, res) => {
         post(transferURL, JSON.stringify(params), {
             headers: {
                 'content-type': 'application/json',
-                'referer': process.env.PCD_HTTP_REFERER          //API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
+                'referer': process.env.PCD_HTTP_REFERER          // API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
             }
         })
             .then(r2 => {
@@ -370,7 +386,7 @@ router.post('/transferReguler', (req, res) => {
         post(transferURL, JSON.stringify(params), {
             headers: {
                 'content-type': 'application/json',
-                'referer': process.env.PCD_HTTP_REFERER          //API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
+                'referer': process.env.PCD_HTTP_REFERER          // API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
             }
         })
             .then(r2 => {
@@ -412,7 +428,7 @@ router.post('/simplePayCard', (req, res) => {
         post(simplePayCardURL, JSON.stringify(params), {
             headers: {
                 'content-type': 'application/json',
-                'referer': process.env.PCD_HTTP_REFERER          //API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
+                'referer': process.env.PCD_HTTP_REFERER          // API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
             }
         })
             .then(r2 => {
@@ -456,7 +472,7 @@ router.post('/regulerPayCard', (req, res) => {
         post(regulerPayCardURL, JSON.stringify(params), {
             headers: {
                 'content-type': 'application/json',
-                'referer': process.env.PCD_HTTP_REFERER          //API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
+                'referer': process.env.PCD_HTTP_REFERER          // API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
             }
         })
             .then(r2 => {
@@ -489,7 +505,7 @@ router.post('/puserDel', (req, res) => {
         post(puserDelURL, JSON.stringify(params), {
             headers: {
                 'content-type': 'application/json',
-                'referer': process.env.PCD_HTTP_REFERER          //API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
+                'referer': process.env.PCD_HTTP_REFERER          // API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
             }
         })
             .then(r2 => {
@@ -506,18 +522,13 @@ router.post('/puserDel', (req, res) => {
  */
 const createOid = () => {
     const now_date = new Date();
-    now_year = now_date.getFullYear()
-    now_month = now_date.getMonth() + 1
-    now_month = (now_month < 10) ? '0' + now_month : now_month
-    now_day = now_date.getDate()
-    now_day = (now_day < 10) ? '0' + now_day : now_day
-    now_h = now_date.getHours()
-    now_h = (now_h < 10) ? '0' + now_h : now_h
-    now_i = now_date.getMinutes()
-    now_i = (now_i < 10) ? '0' + now_i : now_i
-    now_hi = parseInt(now_h + '' + now_i)
-    datetime = now_date.getTime();
-    return 'test' + now_year + now_month + now_day + datetime;
+    const now_year = now_date.getFullYear();
+    let now_month = now_date.getMonth() + 1;
+    let now_day = now_date.getDate();
+    now_month = (now_month < 10) ? '0' + now_month : now_month;
+    now_day = (now_day < 10) ? '0' + now_day : now_day;
+    return 'test' + now_year + now_month + now_day + now_date.getTime();
+
 };
 
 
