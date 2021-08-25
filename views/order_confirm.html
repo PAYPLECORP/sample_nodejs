@@ -55,15 +55,14 @@
 {% endblock %}
 {% block script %}
 
-<script src="https://testcpay.payple.kr/js/cpay.payple.1.0.1.js"></script> <!-- 테스트결제시 -->
-<!-- <script src="https://cpay.payple.kr/js/cpay.payple.1.0.1.js"></script> --> <!-- 실결제시 -->
+<script src="https://testcpay.payple.kr/js/cpay.payple.1.0.1.js"></script> <!-- 테스트 -->
+<!-- <script src="https://cpay.payple.kr/js/cpay.payple.1.0.1.js"></script> --> <!-- 운영 -->
 
 <script>
     $(document).ready(function () {
         $('#payAction').on('click', function (event) {
             /* ############# /order_confirm 에서 전달받은 body 데이터 세팅 ############# */
             /* ################ /order 에서 입력한 값에 따라 다를 수 있음 ############### */
-            var pcd_cpay_ver = "{{pcd_cpay_ver}}";
             var is_direct = "{{is_direct}}";
             var pay_type = "{{pay_type}}";
             var pay_work = "{{work_type}}";
@@ -92,7 +91,6 @@
             /*
              *  공통 설정
              */
-            obj.PCD_CPAY_VER = pcd_cpay_ver;		                        // (필수) 결제창 버전 (Default : 1.0.1)
             obj.PCD_PAY_TYPE = pay_type;			                        // (필수) 결제 방법 (transfer | card)
             obj.PCD_PAY_WORK = pay_work;			                        // (필수) 결제요청 업무구분 (AUTH : 본인인증+계좌등록, CERT: 본인인증+계좌등록+결제요청등록(최종 결제승인요청 필요), PAY: 본인인증+계좌등록+결제완료)
             obj.PCD_CARD_VER = card_ver || '01';			                // DEFAULT: 01 (01: 정기결제 플렛폼, 02: 일반결제 플렛폼), 카드결제 시 필수

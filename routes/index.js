@@ -25,7 +25,6 @@ router.get('/', (req, res) => {
 */
 router.post('/order_confirm', (req, res) => {
     const data = {
-        pcd_cpay_ver: req.body.pcd_cpay_ver,          // 결제창 버전 (Default : 1.0.1)
         is_direct: req.body.is_direct,                // 결제창 방식 (DIRECT: Y | POPUP: N)
         pay_type: req.body.pay_type,                  // 결제수단
         work_type: req.body.work_type,                // 결제요청방식
@@ -77,8 +76,8 @@ router.post('/auth', (req, res, next) => {
             'referer': process.env.PCD_HTTP_REFERER        //API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
         }
     }).then((response) => {
-        console.log({...response.data});
-        res.json({...response.data});                // 발급받은 가맹점인증 Auth Key로 승인
+        console.log(response.data);
+        res.json(response.data);                // 발급받은 가맹점인증 Auth Key로 승인
     }).catch((error) => {
         console.error(error);
         next(error);
@@ -164,7 +163,7 @@ router.post('/payconfirm', (req, res, next) => {
             'referer': process.env.PCD_HTTP_REFERER    //API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
         }
     })
-        .then(response => res.json({...response.data}))
+        .then(response => res.json(response.data))
         .catch(err => console.error(err));
 });
 
@@ -198,7 +197,7 @@ router.post('/refund', (req, res) => {
                 'referer': process.env.PCD_HTTP_REFERER    // API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
             }
         })
-            .then(r2 => res.json({...r2.data}))
+            .then(r2 => res.json(r2.data))
             .catch(err => console.error(err));
     }).catch(err => console.error(err));
 
@@ -232,7 +231,7 @@ router.post('/taxsaveReg', (req, res) => {
             }
         })
             .then(r2 => {
-                res.json({...r2.data});
+                res.json(r2.data);
             })
             .catch(err => console.error(err));
     });
@@ -265,7 +264,7 @@ router.post('/taxsaveCan', (req, res) => {
             }
         })
             .then(r2 => {
-                res.json({...r2.data});
+                res.json(r2.data);
             })
             .catch(err => console.error(err));
     });
@@ -301,7 +300,7 @@ router.post('/paycheck', (req, res) => {
         })
             .then(r2 => {
                 console.log(r2.data);
-                res.json({...r2.data});
+                res.json(r2.data);
             })
             .catch(err => console.error(err));
     });
@@ -345,7 +344,7 @@ router.post('/transferSimple', (req, res) => {
         })
             .then(r2 => {
                 console.log(r2.data);
-                res.json({...r2.data});
+                res.json(r2.data);
             })
             .catch(err => console.error(err));
     });
@@ -391,7 +390,7 @@ router.post('/transferReguler', (req, res) => {
         })
             .then(r2 => {
                 console.log(r2.data);
-                res.json({...r2.data});
+                res.json(r2.data);
             })
             .catch(err => console.error(err));
     });
@@ -433,7 +432,7 @@ router.post('/simplePayCard', (req, res) => {
         })
             .then(r2 => {
                 console.log(r2.data);
-                res.json({...r2.data});
+                res.json(r2.data);
             })
             .catch(err => console.error(err));
     });
@@ -477,7 +476,7 @@ router.post('/regulerPayCard', (req, res) => {
         })
             .then(r2 => {
                 console.log(r2.data);
-                res.json({...r2.data});
+                res.json(r2.data);
             })
             .catch(err => console.error(err));
     });
@@ -510,7 +509,7 @@ router.post('/puserDel', (req, res) => {
         })
             .then(r2 => {
                 console.log(r2.data);
-                res.json({...r2.data});
+                res.json(r2.data);
             })
             .catch(err => console.error(err));
     });
