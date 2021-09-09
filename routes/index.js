@@ -65,7 +65,7 @@ router.post('/auth', (req, res, next) => {
         custKey: process.env.CUST_KEY || '',               // 가맹점 Key (실결제시 .env.json 파일내 발급받은 운영Key를 작성하시기 바랍니다.)
         PCD_PAYCANCEL_FLAG: req.body.PCD_PAYCANCEL_FLAG,   // 승인취소 요청변수
         PCD_PAY_WORK: req.body.PCD_PAY_WORK,               // 결제요청 업무구분 (AUTH : 본인인증+계좌등록, CERT: 본인인증+계좌등록+결제요청등록(최종 결제승인요청 필요), PAY: 본인인증+계좌등록+결제완료)
-        PCD_PAYCHECK_FLAG: req.body.PCD_PAYCHECK_FLAG,     // 결제결과조회 요청변수
+        PCD_PAYCHK_FLAG: req.body.PCD_PAYCHK_FLAG,     // 결제결과조회 요청변수
         PCD_PAY_TYPE: req.body.PCD_PAY_TYPE,               // 결제 방법 (transfer | card)
         PCD_SIMPLE_FLAG: req.body.PCD_PAY_TYPE             // 간편결제 여부 (Y | N)
     };
@@ -276,8 +276,8 @@ router.post('/taxsaveCan', (req, res) => {
  */
 router.post('/paycheck', (req, res) => {
     //(기존 가맹점인증 라우터 이용 - POST process.env.HOSTNAME/public_html/sample/node/auth)
-    //[결제결과조회]가맹점인증 요청변수: PCD_PAYCHECK_FLAG: 'Y'
-    post(process.env.HOSTNAME + '/node/auth', {PCD_PAYCHECK_FLAG: 'Y'}).then(r => {
+    //[결제결과조회]가맹점인증 요청변수: PCD_PAYCHK_FLAG: 'Y'
+    post(process.env.HOSTNAME + '/node/auth', {PCD_PAYCHK_FLAG: 'Y'}).then(r => {
         const paycheckURL = r.data.return_url;             // 리턴 받은 결제결과 요청 URL
         const params = {
             PCD_CST_ID: r.data.cst_id,                     // 리턴 받은 cst_id Token
