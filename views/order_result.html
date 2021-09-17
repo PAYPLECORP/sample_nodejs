@@ -1,21 +1,27 @@
-{% extends 'layout.html' %}
-
-{% block content %}
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no"/>
+    <title>결제요청 결과</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+</head>
+<body>
 <script>
     $(document).ready(function () {
-        var pay_work = "{{PCD_PAY_WORK}}";
-
-        $('#payConfirmAction').on('click', function (e) {
+        // 결제요청 재컨펌(CERT)
+        $('#payConfirmAct').on('click', function (e) {
 
             e.preventDefault();
 
             $('#payConfirmResult').text('');
 
-            var con = "결제승인하시겠습니까?";
+            var con = "결제를 승인(CERT)하시겠습니까?";
 
-            if (confirm(con) === true) {
-
-                const serializeArray = $('#payConfirm').serializeArray();
+            if (confirm(con)) {
+                const serializeArray = $('#payConfirmForm').serializeArray();
                 const reqData = {};
 
                 serializeArray.forEach(element => {
@@ -23,35 +29,28 @@
                 });
 
                 $.ajax({
-                    url: '/node/payconfirm',
+                    url: '/node/payCertSend',
                     dataType: 'json',
                     type: 'POST',
                     data: reqData,
                     success: function (data) {
-                        // console.log(data);
-                        if (data.PCD_PAY_MSG) {
-                            var $_table = $("<table></table>");
-                            var table_data = "";
+                        console.log(data);
 
-                            $.each(data, function (key, value) {
-                                table_data += '<tr><td>' + key + '</td><td>: ' + value + '</td><tr>';
-                            });
+                        alert(data.PCD_PAY_MSG);
 
-                            $_table.append(table_data);
+                        var $_table = $("<table></table>");
+                        var table_data = "";
 
-                            $_table.appendTo('#payConfirmResult');
+                        $.each(data, function (key, value) {
+                            table_data += '<tr><td>' + key + '</td><td>: ' + value + '</td><tr>';
+                        });
 
-                            $('#payConfirmResult').css('display', '');
+                        $_table.append(table_data);
 
-                            if (data.PCD_PAY_RST === 'success') {
-                                $('#payConfirmAction').css('display', 'none');
-                                $('#payConfirmCancel').css('display', '');
-                            }
-                        } else {
-                            alert('결제승인요청 실패');
-                            return false;
+                        $_table.appendTo('#payConfirmResult');
 
-                        }
+                        $('#payConfirmResult').css('display', '');
+
                     },
                     error: function (jqxhr, status, error) {
                         console.log(jqxhr);
@@ -64,48 +63,41 @@
             }
         });
 
+        // 결제 취소 요청
+        $('#payRefundAct').on('click', function () {
 
-        $('#payConfirmCancel').on('click', function () {
-            var con = " 환불(승인취소)요청을 전송합니다. \n 진행하시겠습니까? ";
+            $('#payRefundResult').text('');
 
-            if (confirm(con) === true) {
-                const reqData = {
-                    "PCD_PAY_OID": "{{PCD_PAY_OID}}",
-                    "PCD_REGULER_FLAG": "{{PCD_REGULER_FLAG}}",
-                    "PCD_PAY_YEAR": "{{PCD_PAY_YEAR}}",
-                    "PCD_PAY_MONTH": "{{PCD_PAY_MONTH}}",
-                    "PCD_PAY_TIME": "{{PCD_PAY_TIME}}",
-                    "PCD_PAY_DATE": "{{PCD_PAY_TIME}}".substring(0, 8),
-                    "PCD_REFUND_TOTAL": "{{PCD_PAY_TOTAL}}"
-                }
+            var con = confirm("결제취소하시겠습니까?");
+            if (con) {
+                const serializeArray = $('#payRefundForm').serializeArray();
+                const reqData = {};
+
+                serializeArray.forEach(element => {
+                    reqData[element['name']] = element['value'];
+                });
 
                 $.ajax({
-                    type: 'POST',
-                    url: '/node/refund',
                     dataType: 'json',
+                    type: 'POST',
                     data: reqData,
+                    url: '/node/payRefund',
                     success: function (data) {
-                        if (data.PCD_PAY_MSG) {
-                            var $_table = $("<table></table>");
-                            var table_data = "";
+                        console.log(data);
 
-                            $.each(data, function (key, value) {
-                                table_data += '<tr><td>' + key + '</td><td>: ' + value + '</td><tr>';
-                            });
+                        alert(data.PCD_PAY_MSG);
 
-                            $_table.append(table_data);
+                        var $_table = $("<table></table>");
+                        var table_data = "";
 
-                            $_table.appendTo('#PayRefundResult');
+                        $.each(data, function (key, value) {
+                            table_data += '<tr><td>' + key + '</td><td>: ' + value + '</td><tr>';
+                        });
 
-                            if (data.PCD_PAY_RST === 'success') {
-                                $('#payConfirmCancel').css('display', 'none');
-                                alert('환불(승인취소)요청 성공')
-                            }
-                        } else {
-                            alert('환불(승인취소)요청 실패');
-                            return false;
+                        $_table.append(table_data);
 
-                        }
+                        $_table.appendTo('#payRefundResult');
+
                     },
                     error: function (jqxhr, status, error) {
                         console.log(jqxhr);
@@ -120,103 +112,107 @@
                 return false;
             }
         });
-
-        if (pay_work == 'PAY') $('#payConfirmCancel').css('display', '');
-
     });
-
-
 </script>
-<div style="border: 1px solid black; width: 800px;">
-    PCD_PAY_RST = {{PCD_PAY_RST}}       <!-- 결제요청 결과(success|error) -->
+<p><b>Response (PAY:결과 CERT:인증 AUTH:등록)</b></p>
+{% if returnedData %}
+{% for key, val in returnedData %}
+<span>{{key}}=>{{val}}</span><br>
+{% endfor %}
+{% endif %}
+
+<div style="display:none">
+    PCD_PAY_RST = {{pay_rst}}
     <br>
-    PCD_PAY_MSG = {{PCD_PAY_MSG}}       <!-- 결제요청 결과 메시지 -->
+    PCD_PAY_MSG = {{pay_msg}}
     <br>
-    PCD_PAY_OID = {{PCD_PAY_OID}}       <!-- 주문번호 -->
+    PCD_PAY_OID = {{pay_oid}}
     <br>
-    PCD_PAY_TYPE = {{PCD_PAY_TYPE}}     <!-- 결제 방법 (transfer | card) -->
+    PCD_PAY_TYPE = {{pay_type}}
     <br>
-    PCD_PAY_WORK = {{PCD_PAY_WORK}}     <!-- 결제요청 업무구분 (CERT: 결제정보인증등록, PAY: 결제승인요청 ) -->
+    PCD_PAY_WORK = {{pay_work}}
     <br>
-    PCD_PAYER_ID = {{PCD_PAYER_ID}}     <!-- 결제자 고유ID (결제완료시 RETURN) -->
+    PCD_PAYER_ID = {{payer_id}}
     <br>
-    PCD_PAYER_NO = {{PCD_PAYER_NO}}     <!-- 가맹점 회원 고유번호 -->
-    {% if PCD_PAY_TYPE === 'transfer' %}
+    PCD_PAYER_NO = {{payer_no}}
+    {% if pay_type == 'transfer' %}
     <br>
-    PCD_PAY_BANKACCTYPE = {{PCD_PAY_BANKACCTYPE}}       <!--현금영수증 발행대상 (개인:personal, 사업자:company)-->
+    PCD_PAY_BANKACCTYPE = {{pay_bankacctype}}
     {% endif %}
     <br>
-    PCD_PAYER_NAME = {{PCD_PAYER_NAME}}         <!-- 결제자 이름 -->
+    PCD_PAYER_NAME = {{payer_name}}
     <br>
-    PCD_PAYER_EMAIL = {{PCD_PAYER_EMAIL}}       <!-- 결제자 Email (출금결과 수신) -->
+    PCD_PAYER_EMAIL = {{payer_email}}
     <br>
-    PCD_REGULER_FLAG = {{PCD_REGULER_FLAG}}     <!-- 정기결제 Y|N -->
+    PCD_PAY_GOODS = {{pay_goods}}
     <br>
-    PCD_PAY_YEAR = {{PCD_PAY_YEAR}}             <!-- 정기결제 구분 년도 -->
+    PCD_PAY_TOTAL = {{pay_total}}
     <br>
-    PCD_PAY_MONTH = {{PCD_PAY_MONTH}}           <!-- 정기결제 구분 월 -->
+    {% if $pay_type == 'card' %}
+    PCD_PAY_TAXTOTAL = {{pay_taxtotal}}
     <br>
-    PCD_PAY_GOODS = {{PCD_PAY_GOODS}}           <!-- 결제 상품 -->
+    PCD_PAY_ISTAX = {{pay_istax}}
+    {% endif %}
+    {% if pay_type == 'transfer' %}
     <br>
-    PCD_PAY_TOTAL = {{PCD_PAY_TOTAL}}           <!-- 결제 금액-->
+    PCD_PAY_BANK = {{pay_bank}}
     <br>
-    {% if PCD_PAY_TYPE == 'card' %}
-    PCD_PAY_TAXTOTAL = {{ PCD_PAY_TAXTOTAL }}   <!-- 부가세 (복합과세 경우) -->
+    PCD_PAY_BANKNAME = {{pay_bankname}}
     <br>
-    PCD_PAY_ISTAX = {{ PCD_PAY_ISTAX }}         <!-- 과세여부 (과세:Y 비과세(면세):N) -->
+    PCD_PAY_BANKNUM = {{pay_banknum}}
+    {% endif %}
+    {% if pay_type == 'card' %}
     <br>
-    PCD_PAY_CARDNAME = {{ PCD_PAY_CARDNAME }}   <!-- 카드사명 -->
+    PCD_PAY_CARDNAME = {{pay_cardname}}
     <br>
-    PCD_PAY_CARDNUM = {{ PCD_PAY_CARDNUM }}     <!-- 카드번호 -->
+    PCD_PAY_CARDNUM = {{pay_cardnum}}
     <br>
-    PCD_PAY_CARDTRADENUM = {{ PCD_PAY_CARDTRADENUM }}       <!-- 카드결제 거래번호 -->
+    PCD_PAY_CARDTRADENUM = {{pay_cardtradenum}}
     <br>
-    PCD_PAY_CARDAUTHNO = {{ PCD_PAY_CARDAUTHNO }}           <!-- 카드결제 승인번호 -->
+    PCD_PAY_CARDAUTHNO = {{pay_cardauthno}}
     <br>
-    PCD_PAY_CARDRECEIPT = {{ PCD_PAY_CARDRECEIPT }}         <!-- 카드전표 URL -->
-    {% elif PCD_PAY_TYPE == 'transfer' %}
-    PCD_PAY_BANK = {{ PCD_PAY_BANK }}               <!-- 은행코드 -->
-    <br>
-    PCD_PAY_BANKNAME = {{ PCD_PAY_BANKNAME }}       <!-- 은행명 -->
-    <br>
-    PCD_PAY_BANKNUM = {{ PCD_PAY_BANKNUM }}         <!-- 계좌번호(중간 6자리 * 처리) -->
+    PCD_PAY_CARDRECEIPT = {{pay_cardreceipt}}
     {% endif %}
     <br>
-    PCD_PAY_TIME = {{ PCD_PAY_TIME }}               <!-- 결제 시간 (format: yyyyMMddHHmmss, ex: 20210610142219) -->
+    PCD_PAY_TIME = {{pay_time}}
     <br>
-    PCD_TAXSAVE_RST = {{ PCD_TAXSAVE_RST }}         <!-- 현금영수증 발행결과 Y|N -->
+    PCD_TAXSAVE_RST = {{taxsave_rst}}
 </div>
 
-<div style="width: 800px; height: 20px">&nbsp;</div>
+<div style="width:800px; height:20px">&nbsp;</div>
 
-<div style="border: 1px; width: 800px;">
-    <center>
-        {% if PCD_PAY_WORK == 'CERT' %}
-        <button id="payConfirmAction"
-                style="align: center">결제승인요청
-        </button>
-        {% endif %}
-        <button id="payConfirmCancel" style="align: center; display: none">결제승인취소</button>
-    </center>
+<div style="border:1px; width:800px;text-align:center;">
+    {% if pay_work == 'CERT' %}
+    <button id="payConfirmAct">결제승인요청</button>
+    {% endif %}
+    {% if pay_work != 'AUTH' %}
+    <button id="payRefundAct">결제승인취소</button>
+    {% endif %}
 </div>
 
+<form id="payConfirmForm">
+    <input type="hidden" name="PCD_PAY_TYPE" id="PCD_PAY_TYPE" value="{{pay_type}}"> <!-- (필수) 결제수단 (transfer|card) -->
+    <input type="hidden" name="PCD_AUTH_KEY" id="PCD_AUTH_KEY" value="{{auth_key}}"> <!-- (필수) 파트너 인증 토큰 값 -->
+    <input type="hidden" name="PCD_PAYER_ID" id="PCD_PAYER_ID" value="{{payer_id}}">
+    <!-- (필수) 결제자 고유 ID (빌링키) (결제완료시 RETURN) -->
+    <input type="hidden" name="PCD_PAY_REQKEY" id="PCD_PAY_REQKEY" value="{{pay_reqkey}}"> <!-- (필수) 최종 결제요청 승인키 -->
+    <input type="hidden" name="PCD_PAY_COFURL" id="PCD_PAY_COFURL" value="{{pay_cofurl}}"> <!-- (필수) 최종 결제요청 URL -->
+</form>
+
+<form id="payRefundForm">
+    <input type="hidden" name="PCD_PAY_OID" id="PCD_PAY_OID" value="{{pay_oid}}"> <!-- (필수) 주문번호 -->
+    <input type="hidden" name="PCD_PAY_DATE" id="PCD_PAY_DATE" value="{{pay_date}}"> <!-- (필수) 원거래 결제일자 -->
+    <input type="hidden" name="PCD_REFUND_TOTAL" id="PCD_REFUND_TOTAL" value="{{pay_total}}"> <!-- (필수) 결제취소 요청금액 -->
+    <!--<input type="hidden" name="PCD_REFUND_TAXTOTAL" id="PCD_REFUND_TAXTOTAL" value="{{refund_taxtotal}}">  (선택) 결제취소 부가세 -->
+</form>
+
+<br/><br/><br/><br/>
+<b>Response (CERT:결과)</b><br/><br/>
 <div id='payConfirmResult'></div>
 
-<form id="payConfirm">
-    <input type="hidden" name="PCD_PAY_TYPE" id="PCD_PAY_TYPE"
-           value="{{PCD_PAY_TYPE}}">
-    <!-- 결제방법 -->
-    <input type="hidden" name="PCD_AUTH_KEY" id="PCD_AUTH_KEY"
-           value="{{PCD_AUTH_KEY}}">
-    <!-- (필수)결제용 인증키 -->
-    <input type="hidden" name="PCD_PAYER_ID" id="PCD_PAYER_ID"
-           value="{{PCD_PAYER_ID}}">
-    <!-- (transfer 일때 필수)결제자 고유ID (결제완료시 RETURN) -->
-    <input type="hidden" name="PCD_PAY_REQKEY" id="PCD_PAY_REQKEY"
-           value="{{PCD_PAY_REQKEY}}">
-    <!-- (필수)결제요청 고유KEY -->
-    <input type="hidden" name="PCD_PAY_COFURL" id="PCD_PAY_COFURL"
-           value="{{PCD_PAY_COFURL}}">
-    <!-- (필수)결제승인요청 URL -->
-</form>
-{% endblock %}
+
+<br/><br/><br/><br/>
+<b>Response (취소 결과)</b><br/><br/>
+<div id='payRefundResult'></div>
+</body>
+</html>

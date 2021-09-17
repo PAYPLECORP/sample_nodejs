@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+    <title>현금영수증 발행 및 취소</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $("#taxSaveAct").on("click", function(event) {
+                const serializeArray = $('#taxSaveForm').serializeArray();
+                const reqData = {};
+
+                serializeArray.forEach(element => {
+                    reqData[element['name']] = element['value'];
+                });
+                $.ajax({
+                    type: "POST",
+
+                    url: "/node/taxSaveReq",
+                    dataType: "json",
+                    data: reqData,
+                    success: function(data) {
+                        console.log(data);
+
+                        alert(data.PCD_PAY_MSG);
+
+                        var $_table = $('<table style="border: 1px solid black"></table>');
+                        var table_data = "";
+
+                        $.each(data, function(key, value) {
+                            table_data +=
+                                "<tr><td>" + key + "</td><td>: " + value + "</td><tr>";
+                        });
+
+                        $_table.append(table_data);
+
+                        $_table.appendTo("#taxsavereq_result");
+
+                        $("#taxsavereq_result").css("display", "");
+
+                    },
+                    error: function(jqxhr, status, error) {
+                        console.log(jqxhr);
+
+                        alert(jqxhr.statusText + ",  " + status + ",   " + error);
+                        alert(jqxhr.status);
+                        alert(jqxhr.responseText);
+                    },
+                });
+            });
+
+            $("#PCD_TAXSAVE_REQUEST").on("change", function() {
+                if ($("#PCD_TAXSAVE_REQUEST").val() == "cancel") {
+                    $("#taxsave_amount").css("display", "none");
+                    $("#taxsave_taxtotal").css("display", "none");
+                    $("#reguler_flag").css("display", "none");
+                    $("#taxsave_tradeuse").css("display", "none");
+                    $("#taxsave_identinum").css("display", "none");
+                    $("#taxsave_email").css("display", "none");
+                } else {
+                    $("#taxsave_amount").css("display", "");
+                    $("#taxsave_taxtotal").css("display", "");
+                    $("#reguler_flag").css("display", "");
+                    $("#taxsave_tradeuse").css("display", "");
+                    $("#taxsave_identinum").css("display", "");
+                    $("#taxsave_email").css("display", "");
+                }
+            });
+        });
+    </script>
+    <style>
+        #form_area {
+            width: 600px;
+            margin-bottom: 5px;
+        }
+
+        input {
+            width: 300px;
+            height: 20px;
+            border: 1px solid gray;
+        }
+
+        button {
+            width: 80px;
+            float: right;
+            margin-top: 5px;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <h3>현금영수증 발행 및 취소</h3>
+    <div id="form_area">
+        <form id="taxSaveForm">
+            <table>
+                <tr>
+                    <td>*현금영수증 요청</td>
+                    <td> :
+                        <select id="PCD_TAXSAVE_REQUEST" name="PCD_TAXSAVE_REQUEST">
+                            <option value="regist">등록</option>
+                            <option value="cancel">취소</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td>*주문번호</td>
+                    <td> :
+                        <input type="text" name="PCD_PAY_OID" id="PCD_PAY_OID" value="" placeholder="주문번호를 입력하세요." required />
+                    </td>
+                </tr>
+                <tr>
+                    <td>*발행금액</td>
+                    <td> :
+                        <input type="number" name="PCD_TAXSAVE_AMOUNT" id="PCD_TAXSAVE_AMOUNT" value="" required />
+                    </td>
+                </tr>
+                <tr>
+                    <td>현금영수증 종류</td>
+                    <td> :
+                        <select id="PCD_TAXSAVE_TRADEUSE" name="PCD_TAXSAVE_TRADEUSE">
+                            <option value="personal">소득공제</option>
+                            <option value="company">지출증빙</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td>현금영수증 발행대상 번호</td>
+                    <td> :
+                        <input type="number" name="PCD_TAXSAVE_IDENTINUM" id="PCD_TAXSAVE_IDENTINUM" value="" placeholder="휴대폰번호 or 사업자번호 (숫자만 입력하세요.)" required />
+                    </td>
+                </tr>
+            </table>
+        </form>
+        <button id="taxSaveAct">요청</button>
+    </div>
+    <br />
+    <hr />
+    <div id="taxsavereq_result" ></div>
+</body>
+
+</html>

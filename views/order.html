@@ -1,173 +1,366 @@
-{% extends 'layout.html' %}
-{% block content %}
+<html>
+<head>
+    <title>{{title}}</title>
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+    <style>
+        body {
+            font-size: 12px;
+        }
+
+        input {
+            width: 300px;
+            height: 20px;
+            border: 1px solid gray
+        }
+
+        select {
+            height: 30px;
+        }
+
+        table {
+            border: 1px solid #aaaaaa;
+            text-align: center;
+        }
+
+        tr {
+            height: 35px;
+        }
+
+        th {
+            text-align: center;
+            font-weight: bold;
+            background-color: #ececec;
+        }
+
+        td {
+            text-align: left;
+            padding-left: 5px;
+        }
+
+        #subject,
+        #parameter,
+        #value {
+            background-color: rgba(120,82,232,0.2);
+            font-size: 15px;
+        }
+
+        #orderFormSubmit {
+            font-size: 12px;
+            font-weight: bold;
+            width: 100px;
+            height: 30px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
 <form id="orderForm" name="orderForm" method="post" action="/node/order_confirm">
-    <div>
-        <select name="simple_flag">
-            <option value="N">단건결제</option>
-            <option value="Y">간편결제</option>
-        </select>
-    </div>
-    <div>
-        <select name="is_direct">
-            <option value="N">POPUP</option>
-            <option value="Y">DIRECT</option>
-        </select>
-    </div>
-    <div>
-			<span> <select id="pay_type" name="pay_type">
-					<option value="transfer">계좌이체결제</option>
-					<option value="card">신용카드</option>
-			</select>
-			</span> <span id="card_ver_view" style="display: none;"> <select
-            id="card_ver" name="card_ver">
-					<option value=''>=결제창 선택=</option>
-					<option value="01">카드 정기</option>
-					<option value="02">카드 일반</option>
-			</select>
-			</span>
-    </div>
-    <div>
-        <label for="payple_payer_id">[간편결제] 페이플 결제자 ID</label> <input
-            type="text" name="payple_payer_id" id="payple_payer_id" value="">
-    </div>
-    <div>
-        <label for="payer_no">구매자 고유번호</label> <input type="text"
-                                                      name="buyer_no" id="buyer_no" value="{{userData.buyer_no}}">
-    </div>
-    <div>
-        <label for="buyer_name">구매자 이름</label> <input type="text"
-                                                      name="buyer_name" id="buyer_name" value="{{userData.buyer_name}}">
-    </div>
-    <div>
-        <label for="buyer_hp">구매자 휴대폰번호</label> <input type="text"
-                                                       name="buyer_hp" id="buyer_hp" value="{{userData.buyer_hp}}">
-    </div>
-    <div>
-        <label for="buyer_email">구매자 Email</label> <input type="text"
-                                                          name="buyer_email" id="buyer_email"
-                                                          value="{{userData.buyer_email}}">
-    </div>
-    <div>
-        <label for="buy_goods">구매상품</label> <input type="text"
-                                                   name="buy_goods" id="buy_goods" value="{{userData.buy_goods}}">
-    </div>
-    <div>
-        <label for="buy_total">결제금액</label> <input type="text"
-                                                   name="buy_total" id="buy_total" value="{{userData.buy_total}}">
-    </div>
-    <div>
-        <label for="buy_istax">과세여부</label> <select id="buy_istax"
-                                                    name="buy_istax">
-        <option value="Y" selected>과세</option>
-        <option value="N">비과세</option>
-    </select>
-    </div>
-    <div>
-        <label for="buy_taxtotal">부가세</label> <input type="text"
-                                                     name="buy_taxtotal" id="buy_taxtotal" value="">
-    </div>
-    <div>
-        <label for="order_num">주문번호</label> <input type="text"
-                                                   name="order_num" id="order_num" value="{{userData.oid}}">
-    </div>
-    <div id="is_reguler_view">
-        <label for="is_reguler">정기결제</label> <select id="is_reguler"
-                                                     name="is_reguler">
-        <option value="N">N</option>
-        <option value="Y">Y</option>
-    </select>
-    </div>
-    <div id="pay_year_view">
-        <label for="pay_year">정기결제 구분년도</label>
-        <select id="pay_year" name="pay_year">
-            <option value="">===</option>
-            <option value='2021'>2021</option>
-            <option value='2020'>2020</option>
-            <option value='2019'>2019</option>
-        </select>
-    </div>
-    <div id="pay_month_view">
-        <label for="pay_month">정기결제 구분월</label> <select id="pay_month"
-                                                        name="pay_month">
-        <option value="">===</option>
-        <option value="12">12</option>
-        <option value="11">11</option>
-        <option value="10">10</option>
-        <option value="9">9</option>
-        <option value="8">8</option>
-        <option value="7">7</option>
-        <option value="6">6</option>
-        <option value="5">5</option>
-        <option value="4">4</option>
-        <option value="3">3</option>
-        <option value="2">2</option>
-        <option value="1">1</option>
-    </select>
-    </div>
-    <div id="taxsave_view">
-        <label for="is_taxsave">현금영수증</label> <select id="is_taxsave"
-                                                      name="is_taxsave">
-        <option value="N">N</option>
-        <option value="Y">Y</option>
-    </select>
-    </div>
-    <div>
-        <label for="work_type">결제요청방식</label> <select id="work_type"
-                                                      name="work_type">
-        <option value="CERT">결제요청->결제확인->결제완료</option>
-        <option value="PAY">결제요청->결제완료</option>
-        <option value="AUTH">인증</option>
-    </select>
-    </div>
-    <div>
-        <label for="auth_type">재결제 인증방식</label> <select id="auth_type"
-                                                        name="auth_type">
-        <option value="sms">문자</option>
-        <option value="pwd">패스워드</option>
-    </select>
-    </div>
+    <h2>| 주문 정보 설정</h2>
+    <table>
+        <colgroup>
+            <col style="width: 150px;">
+            <col style="width: 150px;">
+            <col style="width: 300px;">
+        </colgroup>
+        <tr>
+            <th id="subject">
+                항목
+            </th>
+            <th id="parameter">
+                요청변수
+            </th>
+            <th id="value">
+                값
+            </th>
+        </tr>
+        <tr>
+            <th>
+                주문번호
+            </th>
+            <th>
+                PCD_PAY_OID
+            </th>
+            <td>
+                <input type="text" name="pay_oid" id="pay_oid" value="{{data.pay_oid}}">
+            </td>
+        </tr>
+        <tr>
+            <th>
+                파트너사 회원번호
+            </th>
+            <th>
+                PCD_PAYER_NO
+            </th>
+            <td>
+                <input type="text" name="payer_no" id="payer_no" value="{{data.payer_no}}">
+            </td>
+        </tr>
+        <tr>
+            <th>
+                결제고객 이름
+            </th>
+            <th>
+                PCD_PAYER_NAME
+            </th>
+            <td>
+                <input type="text" name="payer_name" id="payer_name" value="{{data.payer_name}}">
+            </td>
+        </tr>
+        <tr>
+            <th>
+                결제고객 휴대전화번호
+            </th>
+            <th>
+                PCD_PAYER_HP
+            </th>
+            <td>
+                <input type="text" name="payer_hp" id="payer_hp" value="{{data.payer_hp}}">
+            </td>
+        </tr>
+        <tr>
+            <th>
+                결제고객 이메일
+            </th>
+            <th>
+                PCD_PAYER_EMAIL
+            </th>
+            <td>
+                <input type="text" name="payer_email" id="payer_email" value="{{data.payer_email}}">
+            </td>
+        </tr>
+        <tr>
+            <th>
+                상품명
+            </th>
+            <th>
+                PCD_PAY_GOODS
+            </th>
+            <td>
+                <input type="text" name="pay_goods" id="pay_goods" value="{{data.pay_goods}}">
+            </td>
+        </tr>
+        <tr>
+            <th>
+                결제금액
+            </th>
+            <th>
+                PCD_PAY_TOTAL
+            </th>
+            <td>
+                <input type="text" name="pay_total" id="pay_total" value="{{data.pay_total}}">
+            </td>
+        </tr>
+    </table>
+
+    <h2>| 결제 정보 설정</h2>
+    <table>
+        <colgroup>
+            <col style="width: 150px;">
+            <col style="width: 150px;">
+            <col style="width: 300px;">
+        </colgroup>
+        <tr>
+            <th id="subject">
+                항목
+            </th>
+            <th id="parameter">
+                요청변수
+            </th>
+            <th id="value">
+                값
+            </th>
+        </tr>
+        <tr>
+            <th>
+                결제수단
+            </th>
+            <th>
+                PCD_PAY_TYPE
+            </th>
+            <td>
+                    <span>
+                        <select id="pay_type" name="pay_type">
+                            <option value="transfer">계좌이체결제</option>
+                            <option value="card">신용카드</option>
+                        </select>
+                    </span>
+                <span id="card_ver_view" style="display:none;">
+                        <select id="card_ver" name="card_ver">
+                            <option value="01">간편/정기(빌링키결제)</option>
+                            <option value="02">앱카드</option>
+                        </select>
+                    </span>
+            </td>
+        </tr>
+        <tr id="taxsave_view">
+            <th>
+                현금영수증 발행여부
+            </th>
+            <th>
+                PCD_TAXSAVE_FLAG
+            </th>
+            <td>
+                <select id="taxsave_flag" name="taxsave_flag">
+                    <option value="N">N</option>
+                    <option value="Y">Y</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <th>
+                빌링키
+            </th>
+            <th>
+                PCD_PAYER_ID
+            </th>
+            <td>
+                <input type="text" name="payple_payer_id" id="payple_payer_id" value="">
+            </td>
+        </tr>
+        <tr>
+            <th>
+                결제요청 방식
+            </th>
+            <th>
+                PCD_PAY_WORK
+            </th>
+            <td>
+                <select id="pay_work" name="pay_work">
+                    <option value="PAY">즉시결제(PAY)</option>
+                    <option value="AUTH">빌링키 등록(AUTH)</option>
+                    <option value="CERT">결제요청 재컨펌(CERT)</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <th>
+                과세설정
+            </th>
+            <th>
+                PCD_PAY_ISTAX
+            </th>
+            <td>
+                <select id="pay_istax" name="pay_istax">
+                    <option value="Y" selected>과세</option>
+                    <option value="N">비과세</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <th>
+                부가세 설정
+            </th>
+            <th>
+                PCD_PAY_TAXTOTAL
+            </th>
+            <td>
+                <input type="text" name="pay_taxtotal" id="pay_taxtotal" value="">
+            </td>
+        </tr>
+        <tr>
+            <th>
+                간편결제 구분
+            </th>
+            <th>
+                PCD_SIMPLE_FLAG
+            </th>
+            <td>
+                <select id="simple_flag" name="simple_flag">
+                    <option value="N">미사용</option>
+                    <option value="Y">사용</option>
+                </select>
+            </td>
+        </tr>
+        <tr id="payer_authtype_view" style="display:none;">
+            <th>
+                비밀번호 결제 인증방식
+            </th>
+            <th>
+                PCD_PAYER_AUTHTYPE
+            </th>
+            <td>
+                <select name="payer_authtype">
+                    <option value="">미사용</option>
+                    <option value="pwd">사용</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <th>
+                결제(요청)결과<br>RETURN URL
+            </th>
+            <th>
+                PCD_RST_URL
+            </th>
+            <td>
+                <select name="is_direct">
+                    <option value="N">팝업</option>
+                    <option value="Y">다이렉트</option>
+                </select>
+            </td>
+        </tr>
+    </table>
 </form>
-<button id="orderFormSubmit">상품구매</button>
-{% endblock %}
-{% block script %}
+<br>
+<button id="orderFormSubmit" style="margin-left: 525px">상품구매</button>
+</body>
 <script>
     $(document).ready(function () {
-        $('#orderFormSubmit').on('click', function (e) {
-            e.preventDefault();
 
-            const form = $('#orderForm')[0];
+        // 결제요청 Form 전송
+        $('#orderFormSubmit').on('click', function (event) {
 
-            form.submit();
+            var fm = $('#orderForm')[0];
+            fm.submit();
+
+            event.preventDefault();
         });
 
-        //결제 타입에 따라 관련 selectTag의 css속성 변경
+        /*
+            #pay_type: 결제수단
+            #taxsave_view: 현금영수증 발행여부 view
+            #card_ver_view: 카드 세부 결제방식 view
+        */
         $("#pay_type").on('change', function (e) {
 
             e.preventDefault();
-            const this_val = $(this).val();
 
-            if (this_val === 'card') {
+            var this_val = $(this).val();
+
+            if (this_val == 'card') {
                 $("#taxsave_view").css('display', 'none');
                 $("#card_ver_view").css('display', '');
             } else {
                 $("#taxsave_view").css('display', '');
                 $("#card_ver_view").css('display', 'none');
             }
-            //카드 결제유형(정기, 일반)에 따라 selectTag의 css속성 변경
+
             $('#card_ver').on('change', function () {
-                if ($(this).val() === '01') {
-                    $('#is_reguler_view').css('display', '');
-                    $('#pay_year_view').css('display', '');
-                    $('#pay_month_view').css('display', '');
-                    $('#work_type option[value*="AUTH"]').prop('disabled', false);
+
+                if ($(this).val() == '01') {
+                    $('#pay_work option[value*="AUTH"]').prop('disabled', false);
                 } else {
-                    $('#is_reguler_view').css('display', 'none');
-                    $('#pay_year_view').css('display', 'none');
-                    $('#pay_month_view').css('display', 'none');
-                    $('#work_type option[value*="AUTH"]').prop('disabled', true);
+                    $('#pay_work option[value*="AUTH"]').prop('disabled', true);
                 }
             });
         });
+
+        /*
+            #simple_flag: 간편결제 여부
+            #payer_authtype_view: 비밀번호 결제 인증방식	view
+         */
+        $("#simple_flag").on('change', function (e) {
+            e.preventDefault();
+
+            var this_val = $(this).val();
+
+            if (this_val == 'Y') {
+                $("#payer_authtype_view").css('display', '');
+            } else {
+                $("#payer_authtype_view").css('display', 'none');
+            }
+        });
+
     });
 </script>
-{% endblock %}
+</html>

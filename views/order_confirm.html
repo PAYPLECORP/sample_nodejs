@@ -1,167 +1,198 @@
-{% extends 'layout.html' %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no"/>
+    <title>Insert title here</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <style>
+        table {
+            border: 1px solid #aaaaaa;
+            text-align: center;
+        }
 
-{% block content %}
-<table border="1" cellspacing="0" cellpadding="1">
+        tr {
+            height: 35px;
+        }
+
+        th {
+            text-align: center;
+            font-weight: bold;
+            background-color: #ececec;
+            font-size: 14px;
+        }
+
+        td {
+            text-align: left;
+            padding-left: 5px;
+        }
+
+        #subject,
+        #parameter {
+            background-color: rgba(120,82,232,0.2);
+            font-size: 15px;
+        }
+    </style>
+<body>
+<table border="1">
+    <h2>| Payple 연동 API </h2>
     <tr>
-        <td>구매자 이름</td>
-        <td>{{buyer_name}}</td>
+        <th id="subject">
+            항목
+        </th>
+        <th id="parameter">
+            요청변수
+        </th>
     </tr>
     <tr>
-        <td>구매자 휴대폰번호</td>
-        <td>{{buyer_hp}}</td>
+        <th>결제자 이름</th>
+        <td>{{payer_name}}</td>
     </tr>
     <tr>
-        <td>구매자 Email</td>
-        <td>{{buyer_email}}</td>
+        <th>결제자 휴대폰번호</th>
+        <td>{{payer_hp}}</td>
     </tr>
     <tr>
-        <td>구매상품</td>
-        <td>{{buy_goods}}</td>
+        <th>결제자 이메일</th>
+        <td>{{payer_email}}</td>
     </tr>
     <tr>
-        <td>결제금액</td>
-        <td>{{buy_total}}</td>
+        <th>구매상품</th>
+        <td>{{pay_goods}}</td>
     </tr>
     <tr>
-        <td>과세여부</td>
-        <td>{{buy_istax}}</td>
+        <th>결제금액</th>
+        <td>{{pay_total}}</td>
     </tr>
     <tr>
-        <td>주문번호</td>
-        <td>{{order_num}}</td>
+        <th>과세여부</th>
+        <td>{{pay_istax}}</td>
     </tr>
     <tr>
-        <td>정기결제</td>
-        <td>{{is_reguler}}</td>
+        <th>주문번호</th>
+        <td>{{pay_oid}}</td>
     </tr>
     <tr>
-        <td>정기결제 구분년도</td>
-        <td>{{pay_year}}</td>
-    </tr>
-    <tr>
-        <td>정기결제 구분월</td>
-        <td>{{pay_month}}</td>
-    </tr>
-    <tr>
-        <td>현금영수증</td>
-        <td>{{is_taxsave}}</td>
-    </tr>
-    <tr>
-        <td colspan="2" align="center">
-            <button id="payAction">결제하기</button>
-        </td>
+        <th>현금영수증</th>
+        <td>{{taxsave_flag}}</td>
     </tr>
 </table>
-{% endblock %}
-{% block script %}
+<br>
+<button id="payAction" style="margin-left:260px">결제하기</button>
+</body>
 
-<script src="https://testcpay.payple.kr/js/cpay.payple.1.0.1.js"></script> <!-- 테스트 -->
-<!-- <script src="https://cpay.payple.kr/js/cpay.payple.1.0.1.js"></script> --> <!-- 운영 -->
+<script src="https://democpay.payple.kr/js/cpay.payple.1.0.1.js"></script> <!-- TEST(테스트) -->
+<!-- <script src="https://cpay.payple.kr/js/cpay.payple.1.0.1.js"></script> --> <!-- REAL(운영) -->
 
 <script>
     $(document).ready(function () {
+        // 결제 요청 
         $('#payAction').on('click', function (event) {
-            /* ############# /order_confirm 에서 전달받은 body 데이터 세팅 ############# */
-            /* ################ /order 에서 입력한 값에 따라 다를 수 있음 ############### */
-            var is_direct = "{{is_direct}}";
             var pay_type = "{{pay_type}}";
-            var pay_work = "{{work_type}}";
-            var card_ver = "{{card_ver}}";
-            var payple_payer_id = "{{payple_payer_id}}";
-            var buyer_no = "{{buyer_no}}";
-            var buyer_name = "{{buyer_name}}";
-            var buyer_hp = "{{buyer_hp}}";
-            var buyer_email = "{{buyer_email}}";
-            var buy_goods = "{{buy_goods}}";
-            var buy_total = parseInt("{{buy_total}}");
-            var buy_taxtotal = parseInt("{{buy_taxtotal}}");
-            var buy_istax = "{{buy_istax}}";
-            var order_num = "{{order_num}}";
-            var is_reguler = "{{is_reguler}}";
-            var pay_year = "{{pay_year}}";
-            var pay_month = "{{pay_month}}";
-            var is_taxsave = "{{is_taxsave}}";
+            var pay_work = "{{pay_work}}";
+            var payer_id = "{{payer_id}}";
+            var payer_no = "{{payer_no}}";
+            var payer_name = "{{payer_name}}";
+            var payer_hp = "{{payer_hp}}";
+            var payer_email = "{{payer_email}}";
+            var pay_goods = "{{pay_goods}}";
+            var pay_total = Number("{{pay_total}}");
+            var pay_taxtotal = Number("{{pay_taxtotal}}");
+            var pay_istax = "{{pay_istax}}";
+            var pay_oid = "{{pay_oid}}";
+            var taxsave_flag = "{{taxsave_flag}}";
             var simple_flag = "{{simple_flag}}";
-            var auth_type = "{{auth_type}}";
-            /* ###################################################################### */
+            var card_ver = "{{card_ver}}";
+            var payer_authtype = "{{payer_authtype}}";
+            var is_direct = "{{is_direct}}";
+            var pcd_rst_url = "";
+            var server_name = "{{hostname}}";
 
-            //결제 유형에 따라 보낼 데이터를 담은 Object
+            // 결제창 방식 설정 - 팝업(상대경로), 다이렉트(절대경로)
+            pcd_rst_url = is_direct === 'Y' ? server_name + "/node/result" : "/node/result";
+
             var obj = {};
 
+            // ############################################ 결제연동 파라미터 ############################################ 
+
+            /* DEFAULT SET 1 */
+            obj.PCD_PAY_TYPE = pay_type; // (필수) 결제수단 (transfer|card)
+            obj.PCD_PAY_WORK = pay_work; // (필수) 결제요청 방식 (AUTH | PAY | CERT)
+
+            // 카드결제 시 필수 (카드 세부 결제방식)
+            obj.PCD_CARD_VER = card_ver; // Default: 01 (01: 간편/정기결제, 02: 앱카드)
+
+            // # 결제요청 방식별(PCD_PAY_WORK) 파라미터 설정 
             /*
-             *  공통 설정
+             * 1. 빌링키 등록
+             * PCD_PAY_WORK : AUTH
              */
-            obj.PCD_PAY_TYPE = pay_type;			                        // (필수) 결제 방법 (transfer | card)
-            obj.PCD_PAY_WORK = pay_work;			                        // (필수) 결제요청 업무구분 (AUTH : 본인인증+계좌등록, CERT: 본인인증+계좌등록+결제요청등록(최종 결제승인요청 필요), PAY: 본인인증+계좌등록+결제완료)
-            obj.PCD_CARD_VER = card_ver || '01';			                // DEFAULT: 01 (01: 정기결제 플렛폼, 02: 일반결제 플렛폼), 카드결제 시 필수
-            obj.PCD_PAYER_AUTHTYPE = auth_type;								// (선택) [간편결제/정기결제] 본인인증 방식 (sms : 문자인증 | pwd : 패스워드 인증)
+            if (pay_work == 'AUTH') {
 
-            // IOS, AOS앱 및 인앱브라우저에서는 결제창 호출 방식을 다이렉트로 연결해 주세요.
-            // direct(절대경로): https://payple.kr/sample/pay.html | popup(상대경로) https:// 로 시작하지 않고, 중간경로( /sample/pay.html)를 표기한 URL
-            // ref: http://docs.payple.kr/faq/pay/callback
-            if (is_direct === 'Y' ? obj.PCD_RST_URL = 'http://localhost:3000/node/result' : obj.PCD_RST_URL = '/node/result') ;
-            // obj.PCD_RST_URL = 'return_url';			        			// (필수) 결제(요청)결과 RETURN URL
+                obj.PCD_PAYER_NO = payer_no; // (선택) 결제자 고유번호 (파트너사 회원 회원번호) (결과전송 시 입력값 그대로 RETURN)
+                obj.PCD_PAYER_NAME = payer_name; // (선택) 결제자 이름
+                obj.PCD_PAYER_HP = payer_hp; // (선택) 결제자 휴대전화번호
+                obj.PCD_PAYER_EMAIL = payer_email; // (선택) 결제자 이메일
+                obj.PCD_TAXSAVE_FLAG = taxsave_flag; // (선택) 현금영수증 발행요청 (Y|N)
+                obj.PCD_SIMPLE_FLAG = simple_flag; // (선택) 간편결제 여부 (Y|N)
 
-
-            obj.payple_auth_file = '/node/auth';	                        // (필수) /절대경로/payple_auth_file (node.js => [app.js] app.post('/pg/auth', ...) {..}
-            //obj.callbackFunction = getResult;								// (선택) 결과를 받고자 하는 callback 함수명 (callback함수를 설정할 경우 PCD_RST_URL 이 작동하지 않음)
-
-            /*
-             *  빌링키 등록 (pay_work === 'AUTH')
-             */
-            if (pay_work === 'AUTH') {
-                obj.PCD_PAYER_NO = buyer_no;						        // (선택) 가맹점 회원 고유번호 (결과전송 시 입력값 그대로 RETURN)
-                obj.PCD_PAYER_NAME = buyer_name;					        // (선택) 결제자 이름
-                obj.PCD_PAYER_HP = buyer_hp;						        // (선택) 결제자 휴대폰 번호
-                obj.PCD_PAYER_EMAIL = buyer_email;					        // (선택) 결제자 Email
-                obj.PCD_TAXSAVE_FLAG = is_taxsave;					        // (선택) 현금영수증 발행여부
-                obj.PCD_REGULER_FLAG = is_reguler;					        // (선택) 정기결제 여부 (Y|N)
-                obj.PCD_SIMPLE_FLAG = simple_flag;					        // (선택) 간편결제 여부 (Y|N)
             }
 
             /*
-             *  최초결제 및 단건(일반,비회원)결제
+             * 2. 빌링키 등록 및 결제
+             * PCD_PAY_WORK : PAY | CERT 
              */
-            else {
-                // 간편결제 여부('N') or 결제창 버전 빈 값
-                if (simple_flag !== 'Y' || payple_payer_id === '') {
-                    obj.PCD_PAYER_NO = buyer_no;						// (선택) 가맹점 회원 고유번호 (결과전송 시 입력값 그대로 RETURN)
-                    obj.PCD_PAYER_NAME = buyer_name;					// (선택) 결제자 이름
-                    obj.PCD_PAYER_HP = buyer_hp;						// (선택) 결제자 휴대폰 번호
-                    obj.PCD_PAYER_EMAIL = buyer_email;					// (선택) 결제자 Email
-                    obj.PCD_PAY_GOODS = buy_goods;						// (필수) 결제 상품
-                    obj.PCD_PAY_TOTAL = buy_total;						// (필수) 결제 금액
-                    obj.PCD_PAY_TAXTOTAL = buy_taxtotal;				// (선택) 부가세 (복합과세인 경우 필수)
-                    obj.PCD_PAY_ISTAX = buy_istax;						// (선택) 과세여부 (과세: Y | 비과세(면세): N)
-                    obj.PCD_PAY_OID = order_num;						// 주문번호 (미입력 시 임의 생성)
-                    obj.PCD_REGULER_FLAG = is_reguler;					// (선택) 정기결제 여부 (Y|N)
-                    obj.PCD_PAY_YEAR = pay_year;						// (PCD_REGULER_FLAG = Y 일때 필수) [정기결제] 결제 구분 년도 (PCD_REGULER_FLAG : 'Y' 일때 필수)
-                    obj.PCD_PAY_MONTH = pay_month;						// (PCD_REGULER_FLAG = Y 일때 필수) [정기결제] 결제 구분 월 (PCD_REGULER_FLAG : 'Y' 일때 필수)
-                    obj.PCD_TAXSAVE_FLAG = is_taxsave;					// (선택) 현금영수증 발행 여부 (Y|N)
-                }
-                // 간편결제 여부('N') or 결제창 버전 포함, (재결제)
-                else if (simple_flag === 'Y' && payple_payer_id !== '') {
-                    obj.PCD_SIMPLE_FLAG = simple_flag;					// 간편결제 여부 (Y|N)
-                    //-- PCD_PAYER_ID 는 소스상에 표시하지 마시고 반드시 Server Side Script 를 이용하여 불러오시기 바랍니다. --//
-                    obj.PCD_PAYER_ID = payple_payer_id;					// 결제자 고유ID (본인인증 된 결제회원 고유 KEY)
+            if (pay_work != 'AUTH') {
 
-                    obj.PCD_PAYER_NO = buyer_no;						// (선택) 가맹점 회원 고유번호 (결과전송 시 입력값 그대로 RETURN)
-                    obj.PCD_PAY_GOODS = buy_goods;						// (필수) 결제 상품
-                    obj.PCD_PAY_TOTAL = buy_total;						// (필수) 결제 금액
-                    obj.PCD_PAY_TAXTOTAL = buy_taxtotal;				// (선택) 부가세(복합과세인 경우 필수)
-                    obj.PCD_PAY_ISTAX = buy_istax;						// (선택) 과세여부 (과세: Y | 비과세(면세): N)
-                    obj.PCD_PAY_OID = order_num;						// 주문번호 (미입력 시 임의 생성)
-                    obj.PCD_REGULER_FLAG = is_reguler;					// (선택) 정기결제 여부 (Y|N)
-                    obj.PCD_PAY_YEAR = pay_year;						// (PCD_REGULER_FLAG = Y 일때 필수) [정기결제] 결제 구분 년도 (PCD_REGULER_FLAG : 'Y' 일때 필수)
-                    obj.PCD_PAY_MONTH = pay_month;						// (PCD_REGULER_FLAG = Y 일때 필수) [정기결제] 결제 구분 월 (PCD_REGULER_FLAG : 'Y' 일때 필수)
-                    obj.PCD_TAXSAVE_FLAG = is_taxsave;					// (선택) 현금영수증 발행 여부 (Y|N)
+                // 2.1 첫결제 및 단건(일반,비회원)결제
+                if (simple_flag != 'Y' || payer_id == '') {
+
+                    obj.PCD_PAY_GOODS = pay_goods; // (필수) 상품명
+                    obj.PCD_PAY_TOTAL = pay_total; // (필수) 결제요청금액
+                    obj.PCD_PAYER_NO = payer_no; // (선택) 결제자 고유번호 (파트너사 회원 회원번호) (결과전송 시 입력값 그대로 RETURN)
+                    obj.PCD_PAYER_NAME = payer_name; // (선택) 결제자 이름
+                    obj.PCD_PAYER_HP = payer_hp; // (선택) 결제자 휴대전화번호
+                    obj.PCD_PAYER_EMAIL = payer_email; // (선택) 결제자 이메일
+                    obj.PCD_PAY_TAXTOTAL = pay_taxtotal; // (선택) 부가세(복합과세 적용 시)
+                    obj.PCD_PAY_ISTAX = pay_istax; // (선택) 과세여부
+                    obj.PCD_PAY_OID = pay_oid; // (선택) 주문번호 (미입력 시 임의 생성)
+                    obj.PCD_TAXSAVE_FLAG = taxsave_flag; // (선택) 현금영수증 발행요청 (Y|N)
                 }
+
+                // 2.2 간편결제 (빌링키결제)
+                if (simple_flag == 'Y' && payer_id != '') {
+
+                    // PCD_PAYER_ID 는 소스상에 표시하지 마시고 반드시 Server Side Script 를 이용하여 불러오시기 바랍니다.	
+                    obj.PCD_PAYER_ID = payer_id; // 빌링키 - 결제자 고유ID (본인인증 된 결제회원 고유 KEY)
+                    obj.PCD_SIMPLE_FLAG = 'Y'; // (필수) 간편결제 여부 (Y|N)
+                    obj.PCD_PAY_GOODS = pay_goods; // (필수) 상품명
+                    obj.PCD_PAY_TOTAL = pay_total; // (필수) 결제요청금액
+                    obj.PCD_PAYER_NO = payer_no; // (선택) 결제자 고유번호 (파트너사 회원 회원번호) (결과전송 시 입력값 그대로 RETURN)
+                    obj.PCD_PAY_TAXTOTAL = pay_taxtotal; // (선택) 부가세(복합과세인 경우 필수)
+                    obj.PCD_PAY_ISTAX = pay_istax; // (선택) 과세여부
+                    obj.PCD_PAY_OID = pay_oid; // (선택) 주문번호 (미입력 시 임의 생성)
+                    obj.PCD_TAXSAVE_FLAG = taxsave_flag; // (선택) 현금영수증 발행요청 (Y|N)
+
+                }
+
             }
-            console.log('obj: ', obj);
+
+            /* DEFAULT SET 2 */
+            obj.PCD_PAYER_AUTHTYPE = payer_authtype; // (선택) 비밀번호 결제 인증방식 (pwd : 패스워드 인증)
+            obj.PCD_RST_URL = pcd_rst_url; // (필수) 결제(요청)결과 RETURN URL
+            //obj.callbackFunction = getResult; // (선택) 결과를 받고자 하는 callback 함수명 (callback함수를 설정할 경우 PCD_RST_URL 이 작동하지 않음)
+
+            /* 파트너 인증시 받은 AuthKey 값 입력  */
+            obj.PCD_AUTH_KEY = "{{authKey}}";
+
+            /* 파트너 인증시 받은 return_url 값 입력  */
+            obj.PCD_PAY_URL = "{{payReqURL}}";
+
             PaypleCpayAuthCheck(obj);
 
             event.preventDefault();
         });
     });
 </script>
-{% endblock %}
+</html>

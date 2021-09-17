@@ -6,17 +6,16 @@ const {post} = require('axios');
  * GET /, order.html 렌더링
  */
 router.get('/', (req, res) => {
-    const userData = {
-        buyer_no: 2335,
-        buyer_name: '홍길동',
-        buyer_hp: '01012345678',
-        buyer_email: 'test@payple.kr',
-        buy_goods: '휴대폰',
-        buy_total: '1000',
-        order_num: 'test',
-        oid: createOid()
+    const data = {
+        payer_no: 2335,
+        payer_name: '홍길동',
+        payer_hp: '01012345678',
+        payer_email: 'test@payple.kr',
+        pay_goods: '휴대폰',
+        pay_total: '1000',
+        pay_oid: createOid(),
     }
-    res.render('order', {userData});
+    res.render('order', {data});
 });
 
 
@@ -25,496 +24,739 @@ router.get('/', (req, res) => {
 */
 router.post('/order_confirm', (req, res) => {
     const data = {
-        is_direct: req.body.is_direct,                // 결제창 방식 (DIRECT: Y | POPUP: N)
-        pay_type: req.body.pay_type,                  // 결제수단
-        work_type: req.body.work_type,                // 결제요청방식
-        card_ver: req.body.card_ver,                  // DEFAULT: 01 (01: 정기결제 플렛폼, 02: 일반결제 플렛폼), 카드결제 시 필수
-        payple_payer_id: req.body.payple_payer_id,    // 결제자 고유ID (본인인증 된 결제회원 고유 KEY)
-        buyer_no: req.body.buyer_no,                  // 가맹점 회원 고유번호
-        buyer_name: req.body.buyer_name,              // 결제자 이름
-        buyer_hp: req.body.buyer_hp,                  // 결제자 휴대폰 번호
-        buyer_email: req.body.buyer_email,            // 결제자 Email
-        buy_goods: req.body.buy_goods,                // 결제 상품
-        buy_total: req.body.buy_total,                // 결제 금액
-        buy_istax: req.body.buy_istax,                // 과세여부 (과세: Y | 비과세(면세): N)
-        buy_taxtotal: req.body.buy_taxtotal,          // 부가세(복합과세인 경우 필수)
-        order_num: req.body.order_num,                // 주문번호
-        pay_year: req.body.pay_year,                  // [정기결제] 결제 구분 년도
-        pay_month: req.body.pay_month,                // [정기결제] 결제 구분 월
-        is_reguler: req.body.is_reguler,              // 정기결제 여부 (Y | N)
-        is_taxsave: req.body.is_taxsave,              // 현금영수증 발행여부
-        simple_flag: req.body.simple_flag,            // 간편결제 여부
-        auth_type: req.body.auth_type                 // [간편결제/정기결제] 본인인증 방식 (sms : 문자인증 | pwd : 패스워드 인증)
+        is_direct: req.body.is_direct || 'N',               // 결제창 방식 (DIRECT: Y | POPUP: N)
+        pay_type: req.body.pay_type || 'transfer',          // 결제수단
+        pay_work: req.body.pay_work || 'PAY',               // 결제요청방식
+        card_ver: req.body.card_ver || '01',                // DEFAULT: 01 (01: 정기결제 플렛폼, 02: 일반결제 플렛폼), 카드결제 시 필수
+        payer_id: req.body.payer_id || '',                  // 결제자 고유ID (본인인증 된 결제회원 고유 KEY)
+        payer_no: req.body.payer_no || '',                  // 파트너 회원 고유번호
+        payer_name: req.body.payer_name || '',              // 결제자 이름
+        payer_hp: req.body.payer_hp || '',                  // 결제자 휴대폰 번호
+        payer_email: req.body.payer_email || '',            // 결제자 Email
+        pay_goods: req.body.pay_goods || '',                // 결제 상품
+        pay_total: req.body.pay_total || '',                // 결제 금액
+        pay_istax: req.body.pay_istax || '',                // 과세여부 (과세: Y | 비과세(면세): N)
+        pay_oid: req.body.pay_oid || '',                    // 주문번호
+        taxsave_flag: req.body.taxsave_flag || '',          // 현금영수증 발행여부
+        pay_taxtotal: req.body.pay_taxtotal || '',          // 부가세(복합과세인 경우 필수)
+        simple_flag: req.body.simple_flag || 'N',           // 간편결제 여부
+        payer_authtype: req.body.payer_authtype || '',      // [간편결제/정기결제] 본인인증 방식 (sms : 문자인증 | pwd : 패스워드 인증)
+        hostname: process.env.HOSTNAME                      // 결제창 호출 URL
     };
-
-    res.render('order_confirm', data);
+    post(process.env.HOSTNAME + '/node/auth').then((response) => {
+        data.authKey = response.data.AuthKey;               // 파트너 인증 후 획득할 수 있는 인증토큰 값
+        data.payReqURL = response.data.return_url;          // 파트너 인증 후 (결제) 요청시 필요한 페이플 도메인 주소입니다.
+        res.render('order_confirm', data);
+    }).catch((error) => {
+        console.error(error);
+    });
 });
 
 /*
- * POST /auth, 가맹점 인증
- * 케이스별로 가맹점 인증 요청에 사용하는 요청변수가 다르니, Payple에서 제공하는 가이드를 통해 요청변수를 확인하시길 바랍니다.
- * ref: http://docs.payple.kr/bank/install/auth
+* POST /paySimpleCardSend, 카드 정기결제 재결제 렌더링(paySimpleCardSend.html)
+*/
+router.get('/paySimpleCardSend', (req, res) => {
+    const data = {
+        payer_id: "",
+        pay_goods: "휴대폰",
+        pay_total: "1000",
+        payer_no: 2335,
+        payer_email: "test@payple.kr"
+    }
+
+    res.render('paySimpleCardSend', data);
+});
+
+/*
+* GET /paySimpleSend, 계좌 정기결제 재결제 렌더링(paySimpleSend.html)
+*/
+router.get('/paySimpleSend', (req, res) => {
+    const data = {
+        payer_id: "",
+        pay_goods: "휴대폰",
+        pay_total: "1000",
+        payer_no: 2335,
+        payer_email: "test@payple.kr"
+    }
+
+    res.render('paySimpleSend', data);
+});
+
+/*
+* GET /payInfo, 결제결과 조회 렌더링(payInfo.html)
+*/
+router.get('/payInfo', (req, res) => {
+    res.render('payInfo');
+});
+
+/*
+* GET /payUser, 등록 조회 및 해지(카드/계좌) 렌더링(payUser.html)
+*/
+router.get('/payUser', (req, res) => {
+    res.render('payUser');
+});
+
+/*
+* GET /linkReg, URL링크결제 렌더링(linkReg.html)
+*/
+router.get('/linkReg', (req, res) => {
+    res.render('linkReg');
+});
+
+/*
+* GET /taxSaveReq, 현금영수증 발행/취소 렌더링(taxSaveReq.html)
+*/
+router.get('/taxSaveReq', (req, res) => {
+    res.render('taxSaveReq');
+});
+
+/*
+ * POST /auth, 파트너 인증
  */
 router.post('/auth', (req, res, next) => {
-    /*
-     * 운영서버(cpay)에서는 계약 후 발급받은 운영 ID, 운영 Key로 인증
-     */
-    const authURL = process.env.URL;                       // 가맹점 인증서버
+    const authURL = process.env.URL;                       // 파트너 인증서버
+    const caseParams = req.body;                           // 상황별 파트너 인증 파라미터
     const params = {
-        cst_id: process.env.CST_ID || '',                  // 가맹점 ID (실결제시 .env.json 파일내 발급받은 운영ID를 작성하시기 바랍니다.)
-        custKey: process.env.CUST_KEY || '',               // 가맹점 Key (실결제시 .env.json 파일내 발급받은 운영Key를 작성하시기 바랍니다.)
-        PCD_PAYCANCEL_FLAG: req.body.PCD_PAYCANCEL_FLAG,   // 승인취소 요청변수
-        PCD_PAY_WORK: req.body.PCD_PAY_WORK,               // 결제요청 업무구분 (AUTH : 본인인증+계좌등록, CERT: 본인인증+계좌등록+결제요청등록(최종 결제승인요청 필요), PAY: 본인인증+계좌등록+결제완료)
-        PCD_PAYCHK_FLAG: req.body.PCD_PAYCHK_FLAG,     // 결제결과조회 요청변수
-        PCD_PAY_TYPE: req.body.PCD_PAY_TYPE,               // 결제 방법 (transfer | card)
-        PCD_SIMPLE_FLAG: req.body.PCD_PAY_TYPE             // 간편결제 여부 (Y | N)
+        cst_id: process.env.CST_ID,                        // 파트너 ID (실결제시 발급받은 운영ID를 작성하시기 바랍니다.)
+        custKey: process.env.CUST_KEY,                     // 파트너 인증키 (실결제시 발급받은 운영Key를 작성하시기 바랍니다.)
+        ...caseParams                                      // 상황별 파트너 인증 파라미터 구조분해
     };
-    console.log(params);
-    post(authURL, JSON.stringify(params), {         // 최초 발급된 가맹점인증 Auth Key
+    /*  ※ Referer 설정 방법
+	TEST : referer에는 테스트 결제창을 띄우는 도메인을 넣어주셔야합니다. 결제창을 띄울 도메인과 referer값이 다르면 무한로딩이 발생합니다.
+	REAL : referer에는 가맹점 도메인으로 등록된 도메인을 넣어주셔야합니다.
+		   다른 도메인을 넣으시면 [AUTH0004] 에러가 발생합니다.
+		   또한, TEST에서와 마찬가지로 결제창을 띄우는 도메인과 같아야 합니다.
+    */
+    post(authURL, JSON.stringify(params), {
         headers: {
             'content-type': 'application/json',
-            'referer': process.env.PCD_HTTP_REFERER        //API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
+            'referer': process.env.PCD_HTTP_REFERER
         }
     }).then((response) => {
         console.log(response.data);
-        res.json(response.data);                // 발급받은 가맹점인증 Auth Key로 승인
+        res.json(response.data);
     }).catch((error) => {
         console.error(error);
         next(error);
     });
-
-    /**
-     * return json
-     {
-        server_name: 'testcpay.payple.kr',
-        result: 'success',
-        result_msg: '사용자 인증 완료!!',
-        cst_id: 'ZnRSL1Z2YlNqUjhaMDRVSzZWckhHdz09',
-        custKey: 'TkdCdkFjcmhtTkdsaG1pSzhPYVY0Zz09',
-        AuthKey: 'K0VnWlZ5TWZSaGNla1Vpay96YnNQQTFnYXcyVWxlSzJGTHdtNHpNTndIUmJIZ2IrUFI1VExnZzhvOGNqS2MwR0RXL2ZVVjNXbUNBSG43ajdJNXJlelZuKzBXenZNa2RQSGMwdzJlNndBS3dwMTF4Y29OMkdEaFI4RjZSQVpidVpMNGdDWGpTSWQ2bjJOZWRCOHVGdHZEZDhZZk82WkcxZUJia3piMTBvOFdaTStYL1B5UEt2MTlLMVdRMlE2UXQ2dm1Od08ySnhCVU91UHNYZ1RyQ01TUm9HeWNDTUFnbE96TDlBR09ZYmNNd2VSOXVCNnEvUnplaEdUNWdqRW42RTZGRzZ6NzdLdExHcWpyMFcvb2I2SWc9PQ==',
-        PCD_PAY_HOST: 'https://testcpay.payple.kr',
-        PCD_PAY_URL: '/index.php?ACT_=PAYM&CPAYVER=202105281747',
-        return_url: 'https://testcpay.payple.kr/index.php?ACT_=PAYM&CPAYVER=202105281747'
-    }
-     */
 });
 
 /*
  * POST /result, 결제결과 렌더링(order_result.html)
  */
 router.post('/result', (req, res) => {
+    const returnedData = req.body;
+    console.log('결제결과 파라미터:', returnedData);
     const data = {
-        PCD_PAY_RST: req.body.PCD_PAY_RST,  // 결제요청 결과(success|error)
-        PCD_PAY_MSG: req.body.PCD_PAY_MSG,  // 결제요청 결과 메시지
-        PCD_PAY_WORK: req.body.PCD_PAY_WORK,
-        // 결제요청 업무구분 (AUTH : 본인인증+계좌등록, CERT: 본인인증+계좌등록+결제요청등록(최종 결제승인요청 필요), PAY: 본인인증+계좌등록+결제완료)
-        PCD_AUTH_KEY: req.body.PCD_AUTH_KEY,  // 결제용 인증키
-        PCD_PAY_REQKEY: req.body.PCD_PAY_REQKEY,  // 결제요청 고유 KEY
-        PCD_PAY_COFURL: req.body.PCD_PAY_COFURL,  // 결제승인요청 URL
-        PCD_PAY_OID: req.body.PCD_PAY_OID,  // 주문번호
-        PCD_PAY_TYPE: req.body.PCD_PAY_TYPE,  // 결제 방법 (transfer | card)
-        PCD_PAYER_ID: req.body.PCD_PAYER_ID,  // 카드등록 후 리턴받은 빌링키
-        PCD_PAYER_NO: req.body.PCD_PAYER_NO,  // 가맹점 회원 고유번호
-        PCD_PAY_GOODS: req.body.PCD_PAY_GOODS,  // 결제 상품
-        PCD_PAY_TOTAL: req.body.PCD_PAY_TOTAL,  // 결제 금액
-        PCD_PAY_TAXTOTAL: req.body.PCD_PAY_TAXTOTAL,
-        // 복합과세(과세+면세) 주문건에 필요한 금액이며 가맹점에서 전송한 값을 부가세로 설정합니다. 과세 또는 비과세의 경우 사용하지 않습니다.
-        PCD_PAY_ISTAX: req.body.PCD_PAY_ISTAX,  // 과세설정 (Default: Y, 과세:Y, 복합과세:Y, 비과세: N)
-        PCD_PAYER_EMAIL: req.body.PCD_PAYER_EMAIL,  // 결제자 Email
-        PCD_PAY_YEAR: req.body.PCD_PAY_YEAR,  // 결제 구분 년도 (PCD_REGULER_FLAG 사용시 응답)
-        PCD_PAY_MONTH: req.body.PCD_PAY_MONTH,  // 결제 구분 월 (PCD_REGULER_FLAG 사용시 응답)
-        PCD_PAY_TIME: req.body.PCD_PAY_TIME,  // 결제 시간 (format: yyyyMMddHHmmss, ex: 20210610142219)
-        PCD_REGULER_FLAG: req.body.PCD_REGULER_FLAG,  // 정기결제 여부 (Y | N)
-        PCD_TAXSAVE_RST: req.body.PCD_TAXSAVE_RST,  // 현금영수증 발행결과 (Y | N)
-        PCD_PAYER_NAME: req.body.PCD_PAYER_NAME   // 결제자 이름
-    };
+        pay_rst: req.body.PCD_PAY_RST || '',                      // 결제요청 결과 (success | error)
+        pay_code: req.body.PCD_PAY_CODE || '',                    // 결제요청 결과 코드
+        pay_msg: req.body.PCD_PAY_MSG || '',                      // 결제요청 결과 메세지
+        pay_type: req.body.PCD_PAY_TYPE || '',                    // 결제수단 (transfer|card)
+        card_ver: req.body.PCD_CARD_VER || '',                    // 카드 세부 결제방식
+        pay_work: req.body.PCD_PAY_WORK || '',                    // 결제요청 방식 (AUTH | PAY | CERT)
+        auth_key: req.body.PCD_AUTH_KEY || '',                    // 결제요청 파트너 인증 토큰 값
+        pay_reqkey: req.body.PCD_PAY_REQKEY || '',                // (CERT 방식) 최종 결제요청 승인키
+        pay_cofurl: req.body.PCD_PAY_COFURL || '',                // (CERT 방식) 최종 결제요청 URL
 
-    if (data.PCD_PAY_TYPE === 'transfer') {
-        data.PCD_PAY_BANK = req.body.PCD_PAY_BANK;   // [계좌결제] 은행코드
-        data.PCD_PAY_BANKNAME = req.body.PCD_PAY_BANKNAME;   // [계좌결제] 은행코드
-        data.PCD_PAY_BANKNUM = req.body.PCD_PAY_BANKNUM;  // [계좌결제] 계좌번호(중간 6자리 * 처리)
-    } else if (data.PCD_PAY_TYPE === 'card') {
-        data.PCD_PAY_CARDNAME = req.body.PCD_PAY_CARDNAME;  // [카드결제] 카드사명
-        data.PCD_PAY_CARDNUM = req.body.PCD_PAY_CARDNUM;  // [카드결제] 카드번호 (ex: 1234-****-****-5678)
-        data.PCD_PAY_CARDTRADENUM = req.body.PCD_PAY_CARDTRADENUM;  // [카드결제] 카드결제 거래번호
-        data.PCD_PAY_CARDAUTHNO = req.body.PCD_PAY_CARDAUTHNO;  // [카드결제] 카드결제 승인번호
-        data.PCD_PAY_CARDRECEIPT = req.body.PCD_PAY_CARDRECEIPT;  // [카드결제] 카드전표 URL
+        payer_id: req.body.PCD_PAYER_ID || '',                    // 결제자 고유 ID (빌링키)
+        payer_no: req.body.PCD_PAYER_NO || '',                    // 결제자 고유번호 (파트너사 회원 회원번호)
+        payer_name: req.body.PCD_PAYER_NAME || '',                // 결제자 이름
+        payer_hp: req.body.PCD_PAYER_HP || '',                    // 결제자 휴대전화번호
+        payer_email: req.body.PCD_PAYER_EMAIL || '',              // 결제자 이메일 (출금결과 수신)
+        pay_oid: req.body.PCD_PAY_OID || '',                      // 주문번호
+        pay_goods: req.body.PCD_PAY_GOODS || '',                  // 상품명
+        pay_total: req.body.PCD_PAY_TOTAL || '',                  // 결제요청금액
+        pay_taxtotal: req.body.PCD_PAY_TAXTOTAL || '',            // 부가세(복합과세 적용 시)
+        pay_istax: req.body.PCD_PAY_ISTAX || 'Y',                 // 과세 여부 (과세:Y 비과세:N)
+        pay_time: req.body.PCD_PAY_TIME || '',                    // 결제완료 시간
+        pay_date: req.body.PCD_PAY_TIME?.substring(0, 8) || '',   // 결제완료 일자
+        pay_bankacctype: req.body.PCD_PAY_BANKACCTYPE || '',      // 고객 구분 (법인 | 개인 or 개인사업자)
+
+        pay_bank: req.body.PCD_PAY_BANK || '',                    // 은행코드
+        pay_bankname: req.body.PCD_PAY_BANKNAME || '',            // 은행명
+        pay_banknum: req.body.PCD_PAY_BANKNUM || '',              // 계좌번호
+        taxsave_rst: req.body.PCD_TAXSAVE_RST || '',              // 현금영수증 발행결과 (Y|N)
+
+        pay_cardname: req.body.PCD_PAY_CARDNAME || '',            // 카드사명
+        pay_cardnum: req.body.PCD_PAY_CARDNUM || '',              // 카드번호
+        pay_cardtradenum: req.body.PCD_PAY_CARDTRADENUM || '',    // 카드 거래번호
+        pay_cardauthno: req.body.PCD_PAY_CARDAUTHNO || '',        // 카드 승인번호
+        pay_cardreceipt: req.body.PCD_PAY_CARDRECEIPT || '',      // 카드 매출전표 URL
+        pay_cardtradenum: req.body.PCD_PAY_CARDTRADENUM || '',    // 카드 거래번호
     }
-    res.render('order_result', data);
+
+    res.render('order_result', {...data, returnedData});
 });
 
 /*
- * POST /payconfirm, 최종승인 요청
+ * POST /payCertSend, 결제 요청(CERT)
  */
-router.post('/payconfirm', (req, res, next) => {
-    const payConfirmURL = req.body.PCD_PAY_COFURL;  // 결제승인요청 URL
+router.post('/payCertSend', (req, res, next) => {
+    const payConfirmURL = req.body.PCD_PAY_COFURL;         // 결제승인요청 URL
+    const pay_type = req.body.PCD_PAY_TYPE;               // 결제방법
     const params = {
-        PCD_CST_ID: process.env.CST_ID,             // 가맹점 ID
-        PCD_CUST_KEY: process.env.CUST_KEY,         // 가맹점 Key
-        PCD_AUTH_KEY: req.body.PCD_AUTH_KEY,        // 결제용 인증키
-        PCD_PAY_TYPE: req.body.PCD_PAY_TYPE,        // 결제방법
-        PCD_PAYER_ID: req.body.PCD_PAYER_ID,        // 결제자 고유ID
-        PCD_PAY_REQKEY: req.body.PCD_PAY_REQKEY     // 결제요청 고유KEY
+        PCD_CST_ID: process.env.CST_ID,                   // 파트너 ID
+        PCD_CUST_KEY: process.env.CUST_KEY,               // 파트너 인증키
+        PCD_AUTH_KEY: req.body.PCD_AUTH_KEY || '',        // 결제용 인증키
+        PCD_PAYER_ID: req.body.PCD_PAYER_ID || '',        // 결제자 고유ID
+        PCD_PAY_REQKEY: req.body.PCD_PAY_REQKEY || ''     // 결제요청 고유KEY
     }
 
     post(payConfirmURL, JSON.stringify(params), {
         headers: {
             'content-type': 'application/json',
-            'referer': process.env.PCD_HTTP_REFERER    //API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
+            'referer': process.env.PCD_HTTP_REFERER
         }
-    })
-        .then(response => res.json(response.data))
-        .catch(err => console.error(err));
+    }).then(response => {
+        const returned = response.data;
+        const data = {
+            PCD_PAY_RST: returned.PCD_PAY_RST,                      // 요청 결과 (success | error)
+            PCD_PAY_CODE: returned.PCD_PAY_CODE,                    // 요청 결과 코드
+            PCD_PAY_MSG: returned.PCD_PAY_MSG,                      // 요청 결과 메시지
+            PCD_PAY_REQKEY: returned.PCD_PAY_REQKEY,                // (CERT방식) 최종 결제요청 승인키
+            PCD_PAY_OID: returned.PCD_PAY_OID,                      // 주문번호
+            PCD_PAY_TYPE: returned.PCD_PAY_TYPE,                    // 결제수단 (transfer|card)
+            PCD_PAYER_ID: returned.PCD_PAYER_ID,                    // 결제자 고유 ID (빌링키)
+            PCD_PAYER_NO: returned.PCD_PAYER_NO,                    // 결제자 고유번호 (파트너사 회원 회원번호)
+            PCD_PAYER_NAME: returned.PCD_PAYER_NAME,                // 결제자 이름
+            PCD_PAYER_HP: returned.PCD_PAYER_HP,                    // 결제자 휴대전화번호
+            PCD_PAYER_EMAIL: returned.PCD_PAYER_EMAIL,              // 결제자 이메일
+            PCD_PAY_GOODS: returned.PCD_PAY_GOODS,                  // 상품명
+            PCD_PAY_AMOUNT: returned.PCD_PAY_AMOUNT,                // 결제금액
+            PCD_PAY_DISCOUNT: returned.PCD_PAY_DISCOUNT,            // 페이플 이벤트 할인금액
+            PCD_PAY_AMOUNT_REAL: returned.PCD_PAY_AMOUNT_REAL,      // 실 결제금액
+            PCD_PAY_TOTAL: returned.PCD_PAY_TOTAL,                  // 결제요청금액
+            PCD_PAY_ISTAX: returned.PCD_PAY_ISTAX,                  // 과세 여부
+            PCD_PAY_TAXTOTAL: returned.PCD_PAY_TAXTOTAL,            // 부가세(복합과세 적용 시)
+            PCD_PAY_TIME: returned.PCD_PAY_TIME,                    // 결제완료 시간
+        }
+
+        if (pay_type === 'card') {
+            data.PCD_PAY_CARDNAME = returned.PCD_PAY_CARDNAME;              // 카드사명
+            data.PCD_PAY_CARDNUM = returned.PCD_PAY_CARDNUM;                // 카드번호
+            data.PCD_PAY_CARDTRADENUM = returned.PCD_PAY_CARDTRADENUM;      // 카드결제 거래번호
+            data.PCD_PAY_CARDAUTHNO = returned.PCD_PAY_CARDAUTHNO;          // 카드결제 승인번호
+            data.PCD_PAY_CARDRECEIPT = returned.PCD_PAY_CARDRECEIPT;        // 카드 매출전표 URL
+        } else if (pay_type === 'transfer') {
+            data.PCD_PAY_BANK = returned.PCD_PAY_BANK;                      // 은행코드
+            data.PCD_PAY_BANKNAME = returned.PCD_PAY_BANKNAME;              // 은행명
+            data.PCD_PAY_BANKNUM = returned.PCD_PAY_BANKNUM;                // 계좌번호
+            data.PCD_TAXSAVE_FLAG = returned.PCD_TAXSAVE_FLAG;              // 현금영수증 발행요청 (Y|N)
+            data.PCD_TAXSAVE_RST = returned.PCD_TAXSAVE_RST;                // 현금영수증 발행결과 (Y|N)
+        }
+        res.json(data);
+    }).catch(err => console.error(err));
 });
 
 /*
- * POST /refund, 환불(승인취소)
- * ref (bank): http://docs.payple.kr/bank/pay/cancel
- * ref (card): http://docs.payple.kr/card/pay/cancel
+ * POST /payRefund, 환불(승인취소)
  */
-router.post('/refund', (req, res) => {
-    //환불(승인취소)전 가맹점 인증 (기존 가맹점인증 라우터 이용 - POST /auth)
-    // console.log('refund', process.env.HOSTNAME);
-    post(process.env.HOSTNAME + '/node/auth', {PCD_PAYCANCEL_FLAG: "Y"}).then(r => {
-        const refundURL = r.data.return_url;                 // 리턴 받은 환불(승인취소) URL
+router.post('/payRefund', (req, res) => {
+    //환불(승인취소)전 파트너 인증
+    post(process.env.HOSTNAME + '/node/auth', {PCD_PAYCANCEL_FLAG: "Y"}).then(auth => {
+        const refundURL = auth.data.return_url;                               // 리턴 받은 환불(승인취소) URL
         const params = {
-            PCD_CST_ID: r.data.cst_id,                       // 리턴 받은 cst_id Token
-            PCD_CUST_KEY: r.data.custKey,                    // 리턴 받은 custKey Token
-            PCD_AUTH_KEY: r.data.AuthKey,                    // 리턴 받은 AuthKey Token
-            PCD_REFUND_KEY: process.env.PCD_REFUND_KEY,      // 환불서비스 Key (관리자페이지 상점정보 > 기본정보에서 확인하실 수 있습니다.)
-            PCD_PAYCANCEL_FLAG: "Y",                         // 'Y' – 고정 값
-            PCD_PAY_OID: req.body.PCD_PAY_OID,               // 주문번호
-            PCD_PAY_DATE: req.body.PCD_PAY_DATE,             // 취소할 원거래일자
-            PCD_REFUND_TOTAL: req.body.PCD_REFUND_TOTAL,     // 환불 요청금액 (기존 결제금액보다 적은 금액 입력 시 부분취소로 진행)
-            PCD_REGULER_FLAG: req.body.PCD_REGULER_FLAG,     // 월 중복결제 방지 Y(사용) | N(그 외)
-            PCD_PAY_YEAR: req.body.PCD_PAY_YEAR,             // 결제 구분 년도
-            PCD_PAY_MONTH: req.body.PCD_PAY_MONTH,           // 결제 구분 월
+            PCD_CST_ID: auth.data.cst_id,                                     // 리턴 받은 cst_id Token
+            PCD_CUST_KEY: auth.data.custKey,                                  // 리턴 받은 custKey Token
+            PCD_AUTH_KEY: auth.data.AuthKey,                                  // 리턴 받은 AuthKey Token
+            PCD_REFUND_KEY: process.env.PCD_REFUND_KEY,                       // 환불서비스 Key (관리자페이지 상점정보 > 기본정보에서 확인하실 수 있습니다)
+            PCD_PAYCANCEL_FLAG: "Y",                                          // 'Y' – 고정 값
+            PCD_PAY_OID: req.body.PCD_PAY_OID || '',                          // (필수) 주문번호
+            PCD_PAY_DATE: req.body.PCD_PAY_DATE || '',                        // (필수) 원거래 결제일자
+            PCD_REFUND_TOTAL: req.body.PCD_REFUND_TOTAL || '',                // (필수) 결제취소 요청금액
+            PCD_REFUND_TAXTOTAL: req.body.PCD_REFUND_TAXTOTAL || ''           // 결제취소 부가세
         }
 
         post(refundURL, JSON.stringify(params), {
             headers: {
                 'content-type': 'application/json',
-                'referer': process.env.PCD_HTTP_REFERER    // API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
+                'referer': process.env.PCD_HTTP_REFERER
             }
-        })
-            .then(r2 => res.json(r2.data))
-            .catch(err => console.error(err));
+        }).then(response => {
+            const returned = response.data;
+            console.log('승인취소(환불) 파라미터:', returned);
+            const data = {}
+            if (returned.PCD_PAY_RST !== '') {
+                data.PCD_PAY_RST = returned.PCD_PAY_RST;                       // 요청 결과 (success | error)
+                data.PCD_PAY_MSG = returned.PCD_PAY_MSG;                       // 요청 결과 메시지
+                data.PCD_PAY_OID = returned.PCD_PAY_OID;                       // 주문번호
+                data.PCD_PAY_TYPE = returned.PCD_PAY_TYPE;                     // 결제수단 (transfer|card)
+                data.PCD_PAYER_NO = returned.PCD_PAYER_NO;                     // 결제자 고유 ID  (빌링키)
+                data.PCD_PAYER_ID = returned.PCD_PAYER_ID;                     // 결제자 고유번호 (파트너사 회원 회원번호)
+                data.PCD_PAY_GOODS = returned.PCD_PAY_GOODS;                   // 상품명
+                data.PCD_REFUND_TOTAL = returned.PCD_REFUND_TOTAL;             // 결제취소 요청금액
+                data.PCD_REFUND_TAXTOTAL = returned.PCD_REFUND_TAXTOTAL;       // 결제취소 부가세
+            } else {
+                data.PCD_PAY_RST = 'error';                                    // 요청 결과 (success | error)
+                data.PCD_PAY_MSG = '환불요청실패';                                // 요청 결과 메시지
+                data.PCD_PAY_OID = params.PCD_PAY_OID;                         // 주문번호
+                data.PCD_PAY_TYPE = '';                                        // 결제수단 (transfer|card)
+                data.PCD_PAYER_NO = '';                                        // 결제자 고유번호 (파트너사 회원 회원번호)
+                data.PCD_PAYER_ID = '';                                        // 결제자 고유 ID  (빌링키)
+                data.PCD_PAY_GOODS = '';                                       // 상품명
+                data.PCD_REFUND_TOTAL = params.PCD_REFUND_TOTAL;               // 결제취소 요청금액
+                data.PCD_REFUND_TAXTOTAL = params.PCD_REFUND_TAXTOTAL;         // 결제취소 부가세
+            }
+            res.json(data)
+        }).catch(err => console.error(err));
     }).catch(err => console.error(err));
 
 });
 
 /*
- * POST /taxsaveReg, 현금영수증 발행요청
- * ref: http://docs.payple.kr/bank/recipt/request
+ * POST /taxSaveReg, 현금영수증 발행/취소 요청
  */
-router.post('/taxsaveReg', (req, res) => {
-    //(기존 가맹점인증 라우터 이용 - POST process.env.HOSTNAME/public_html/sample/node/auth)
-    //[현금영수증 취소 요청]가맹점인증 요청변수: PCD_PAY_WORK = 'TSREG'(발행요청) | 'TSCANCEL'(발행취소)
-    post(process.env.HOSTNAME + '/node/auth', {PCD_PAY_WORK: 'TSREG'}).then(r => {
-        const taxSaveURL = r.data.return_url;                         // 리턴 받은 현금영수증 요청 URL
+router.post('/taxSaveReq', (req, res) => {
+    // 현금영수증 발행, 취소 구분
+    const reqType = req.body.PCD_TAXSAVE_REQUEST === 'regist' ? 'TSREG' : req.body.PCD_TAXSAVE_REQUEST === 'cancel' ? 'TSCANCEL' : '';
+    post(process.env.HOSTNAME + '/node/auth', {PCD_PAY_WORK: reqType}).then(auth => {
+        const taxSaveURL = auth.data.return_url;                               // 리턴 받은 현금영수증 요청 URL
         const params = {
-            PCD_CST_ID: r.data.cst_id,                                // 리턴 받은 cst_id Token
-            PCD_CUST_KEY: r.data.custKey,                             // 리턴 받은 custKey Token
-            PCD_AUTH_KEY: r.data.AuthKey,                             // 리턴 받은 AuthKey Token
-            PCD_PAYER_ID: req.body.PCD_PAYER_ID,                      // 계좌등록 후 리턴 받은 결제(빌링) KEY
-            PCD_PAY_OID: req.body.PCD_PAY_OID,                        // 주문번호
-            PCD_TAXSAVE_AMOUNT: req.body.PCD_TAXSAVE_AMOUNT,          // 현금영수증 발행금액
-            PCD_REGULER_FLAG: req.body.PCD_REGULER_FLAG,              // 월 중복결제 방지 Y(사용) | N(그 외)
-            PCD_TAXSAVE_TRADEUSE: req.body.PCD_TAXSAVE_TRADEUSE,      // personal(소득공제) | company(지출증빙)
-            PCD_TAXSAVE_IDENTINUM: req.body.PCD_TAXSAVE_IDENTINUM,    // 현금영수증 발행대상 번호 (미입력시 결제내역 정보 이용)
+            PCD_CST_ID: auth.data.cst_id,                                      // 리턴 받은 cst_id Token
+            PCD_CUST_KEY: auth.data.custKey,                                   // 리턴 받은 custKey Token
+            PCD_AUTH_KEY: auth.data.AuthKey,                                   // 리턴 받은 AuthKey Token
+            PCD_PAYER_ID: req.body.PCD_PAYER_ID || '',                         // (필수) 결제자 고유 ID (빌링키)
+            PCD_PAY_OID: req.body.PCD_PAY_OID || '',                           // (필수) 주문번호
+            PCD_TAXSAVE_AMOUNT: req.body.PCD_TAXSAVE_AMOUNT || 0,              // (필수) 현금영수증 발행금액
+            PCD_TAXSAVE_TRADEUSE: req.body.PCD_TAXSAVE_TRADEUSE || 'company',  // 현금영수증 발행 타입 (personal:소득공제용 | company:지출증빙)
+            PCD_TAXSAVE_IDENTINUM: req.body.PCD_TAXSAVE_IDENTINUM || '',       // 현금영수증 발행대상 번호
         }
 
         post(taxSaveURL, JSON.stringify(params), {
             headers: {
                 'content-type': 'application/json',
-                'referer': process.env.PCD_HTTP_REFERER  // API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
+                'referer': process.env.PCD_HTTP_REFERER
             }
-        })
-            .then(r2 => {
-                res.json(r2.data);
-            })
-            .catch(err => console.error(err));
+        }).then(response => {
+            const returned = response.data;
+            const data = {};
+            if (returned.PCD_PAY_RST !== '') {
+                data.PCD_PAY_RST = returned.PCD_PAY_RST;                     // 요청 결과 (success | error)
+                data.PCD_PAY_CODE = returned.PCD_PAY_CODE;                   // 요청 결과 코드
+                data.PCD_PAY_MSG = returned.PCD_PAY_MSG;                     // 요청 결과 메세지
+                data.PCD_PAY_WORK = returned.PCD_PAY_WORK;                   // 요청 작업 구분 (TSREG | TSCANCEL)
+                data.PCD_PAYER_ID = returned.PCD_PAYER_ID || '';             // 결제자 고유 ID (빌링키)
+                data.PCD_PAY_OID = returned.PCD_PAY_OID;                     // 주문번호
+                data.PCD_TAXSAVE_AMOUNT = returned.PCD_TAXSAVE_AMOUNT;       // 현금영수증 발행금액
+                data.PCD_TAXSAVE_MGTNUM = returned.PCD_TAXSAVE_MGTNUM;       // 현금영수증 발행된 국세청 발행번호
+            } else {
+                data.PCD_PAY_RST = 'error';                                  // 요청 결과 (success | error)
+                data.PCD_PAY_CODE = '';                                      // 요청 결과 코드
+                data.PCD_PAY_MSG = '요청결과 수신 실패';                         // 요청 결과 메세지
+                data.PCD_PAY_WORK = reqType;                                 // 요청 작업 구분 (TSREG | TSCANCEL)
+                data.PCD_PAY_OID = params.PCD_PAY_OID;                       // 주문번호
+                data.PCD_TAXSAVE_AMOUNT = '';                                // 현금영수증 발행금액
+                data.PCD_TAXSAVE_MGTNUM = '';                                // 현금영수증 발행된 국세청 발행번호
+            }
+            res.json(data);
+        }).catch(err => console.error(err));
     });
 });
 
 /*
- * POST /taxsaveCan, 현금영수증 취소요청
- * ref: http://docs.payple.kr/bank/recipt/cancel
+ * POST /payInfo, 결제결과 조회 요청
  */
-router.post('/taxsaveCan', (req, res) => {
-    //(기존 가맹점인증 라우터 이용 - POST process.env.HOSTNAME/public_html/sample/node/auth)
-    //[현금영수증 취소 요청]가맹점인증 요청변수: PCD_PAY_WORK = 'TSREG':발행요청 || 'TSCANCEL':발행취소
-    post(process.env.HOSTNAME + '/node/auth', {PCD_PAY_WORK: 'TSCANCEL'}).then(r => {
-        const cancelURL = r.data.return_url;                         // 리턴 받은 현금영수증 취소 요청 URL
+router.post('/payInfo', (req, res) => {
+    // 파트너인증 요청변수: PCD_PAYCHK_FLAG: 'Y'
+    post(process.env.HOSTNAME + '/node/auth', {PCD_PAYCHK_FLAG: 'Y'}).then(auth => {
+        const payInfoURL = auth.data.return_url;                // 리턴 받은 결제결과 요청 URL
         const params = {
-            PCD_CST_ID: r.data.cst_id,                               // 리턴 받은 cst_id Token
-            PCD_CUST_KEY: r.data.custKey,                            // 리턴 받은 custKey Token
-            PCD_AUTH_KEY: r.data.AuthKey,                            // 리턴 받은 AuthKey Token
-            PCD_PAYER_ID: req.body.PCD_PAYER_ID,                     // 계좌등록 후 리턴 받은 결제(빌링) KEY
-            PCD_PAY_OID: req.body.PCD_PAY_OID,                       // 주문번호
-            PCD_REGULER_FLAG: req.body.PCD_REGULER_FLAG,             // Y(정기결제) | N(단건결제)
-            PCD_TAXSAVE_TRADEUSE: req.body.PCD_TAXSAVE_TRADEUSE,     // personal(소득공제) | company(지출증빙)
-            PCD_TAXSAVE_IDENTINUM: req.body.PCD_TAXSAVE_IDENTINUM,   // 휴대폰번호, 사업자번호 (미입력 시 결제내역 정보 이용)
+            PCD_CST_ID: auth.data.cst_id,                       // 리턴 받은 cst_id Token
+            PCD_CUST_KEY: auth.data.custKey,                    // 리턴 받은 custKey Token
+            PCD_AUTH_KEY: auth.data.AuthKey,                    // 리턴 받은 AuthKey Token
+            PCD_PAYCHK_FLAG: 'Y',                               // 결과조회 여부(Y)
+            PCD_PAY_TYPE: req.body.PCD_PAY_TYPE || 'transfer',  // (필수) 결제수단 (transfer|card)
+            PCD_PAY_OID: req.body.PCD_PAY_OID || '',            // (필수) 주문번호
+            PCD_PAY_DATE: req.body.PCD_PAY_DATE || ''           // (필수) 원거래 결제일자
         }
-
-        post(cancelURL, JSON.stringify(params), {
+        post(payInfoURL, JSON.stringify(params), {
             headers: {
                 'content-type': 'application/json',
-                'referer': process.env.PCD_HTTP_REFERER  // API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
+                'referer': process.env.PCD_HTTP_REFERER
             }
-        })
-            .then(r2 => {
-                res.json(r2.data);
-            })
-            .catch(err => console.error(err));
+        }).then(response => {
+            const returned = response.data;
+            const data = {};
+            if (returned.PCD_PAY_RST !== '') {
+                data.PCD_PAY_RST = returned.PCD_PAY_RST;                      // 요청 결과 (success | error)
+                data.PCD_PAY_CODE = returned.PCD_PAY_CODE;                    // 요청 결과 코드
+                data.PCD_PAY_MSG = returned.PCD_PAY_MSG;                      // 요청 결과 메시지
+                data.PCD_PAY_OID = returned.PCD_PAY_OID;                      // 주문번호
+                data.PCD_PAY_TYPE = returned.PCD_PAY_TYPE;                    // 결제수단 (transfer|card)
+                data.PCD_PAYER_NO = returned.PCD_PAYER_NO;                    // 결제자 고유번호 (파트너사 회원 회원번호)
+                data.PCD_PAYER_ID = returned.PCD_PAYER_ID;                    // 결제자 고유 ID (빌링키)
+                data.PCD_PAYER_EMAIL = returned.PCD_PAYER_EMAIL;              // 결제자 이메일
+                data.PCD_PAY_GOODS = returned.PCD_PAY_GOODS;                  // 상품명
+                data.PCD_PAY_TOTAL = returned.PCD_PAY_TOTAL;                  // 결제요청금액
+                data.PCD_PAY_TIME = returned.PCD_PAY_TIME;                    // 결제완료 시간
+                data.PCD_PAY_ISTAX = returned.PCD_PAY_ISTAX || '';            // 과세 여부
+                data.PCD_PAY_TAXTOTAL = returned.PCD_PAY_TAXTOTAL || '';      // 부가세(복합과세 적용 시)
+                if (returned.PCD_PAY_TYPE === 'card') {
+                    data.PCD_PAY_CARDNAME = returned.PCD_PAY_CARDNAME;               // 카드사명
+                    data.PCD_PAY_CARDNUM = returned.PCD_PAY_CARDNUM;                 // 카드번호
+                    data.PCD_PAY_CARDTRADENUM = returned.PCD_PAY_CARDTRADENUM;       // 카드 거래번호
+                    data.PCD_PAY_CARDRECEIPT = returned.PCD_PAY_CARDRECEIPT;         // 카드 매출전표 URL
+                    data.PCD_PAY_CARDAUTHNO = returned.PCD_PAY_CARDAUTHNO || '';     // 카드 승인번호
+                } else if (returned.PCD_PAY_TYPE === 'transfer') {
+                    data.PCD_PAY_BANK = returned.PCD_PAY_BANK;                       // 은행코드
+                    data.PCD_PAY_BANKNAME = returned.PCD_PAY_BANKNAME;               // 은행명
+                    data.PCD_PAY_BANKNUM = returned.PCD_PAY_BANKNUM;                 // 계좌번호
+                    data.PCD_TAXSAVE_FLAG = returned.PCD_TAXSAVE_FLAG;               // 현금영수증 발행요청 (Y|N)
+                    data.PCD_TAXSAVE_RST = returned.PCD_TAXSAVE_RST;                 // 현금영수증 발행결과 (Y|N)
+                }
+            } else {
+                data.PCD_PAY_RST = "error";                       // 요청 결과 (success | error)
+                data.PCD_PAY_CODE = "결제내역 조회 에러";              // 요 청 결과 코드
+                data.PCD_PAY_MSG = "";                            // 요청 결과 메시지
+                data.PCD_PAY_OID = params.PCD_PAY_OID;            // 주문번호
+                data.PCD_PAY_TYPE = params.PCD_PAY_TYPE;          // 결제수단 (transfer|card)
+                data.PCD_PAYER_NO = "";                           // 결제자 고유번호 (파트너사 회원 회원번호)
+                data.PCD_PAYER_ID = "";                           // 결제자 고유 ID (빌링키)
+                data.PCD_PAY_GOODS = "";                          // 상품명
+                data.PCD_PAY_TOTAL = "";                          // 결제요청금액
+                data.PCD_PAY_TIME = "";                           // 결제완료 시간
+                data.PCD_TAXSAVE_RST = "";                        // 현금영수증 발행결과 (Y|N)
+                if (params.PCD_PAY_TYPE === 'card') {
+                    data.PCD_PAY_CARDNAME = "";                   // 카드사명
+                    data.PCD_PAY_CARDNUM = "";                    // 카드번호
+                    data.PCD_PAY_CARDTRADENUM = "";               // 카드 거래번호
+                    data.PCD_PAY_CARDRECEIPT = "";                // 카드 매출전표 URL
+                    data.PCD_PAY_CARDAUTHNO = "";                 // 카드 승인번호
+                } else if (params.PCD_PAY_TYPE === 'transfer') {
+                    data.PCD_PAY_BANK = "";                       // 은행코드
+                    data.PCD_PAY_BANKNAME = "";                   // 은행명
+                    data.PCD_PAY_BANKNUM = "";                    // 계좌번호
+                    data.PCD_TAXSAVE_FLAG = "";                   // 현금영수증 발행요청 (Y|N)
+                    data.PCD_TAXSAVE_RST = "";                    // 현금영수증 발행결과 (Y|N)
+                }
+            }
+            res.json(data);
+        }).catch(err => console.error(err));
     });
 });
 
 /*
- * POST /paycheck, 결제결과 조회요청
- * ref: http://docs.payple.kr/bank/result/search
+ * POST /payUserInfo, 계좌/카드 등록조회 요청
  */
-router.post('/paycheck', (req, res) => {
-    //(기존 가맹점인증 라우터 이용 - POST process.env.HOSTNAME/public_html/sample/node/auth)
-    //[결제결과조회]가맹점인증 요청변수: PCD_PAYCHK_FLAG: 'Y'
-    post(process.env.HOSTNAME + '/node/auth', {PCD_PAYCHK_FLAG: 'Y'}).then(r => {
-        const paycheckURL = r.data.return_url;             // 리턴 받은 결제결과 요청 URL
+router.post('/payUserInfo', (req, res) => {
+    //파트너인증 요청변수: PCD_PAY_WORK
+    post(process.env.HOSTNAME + '/node/auth', {PCD_PAY_WORK: 'PUSERINFO'}).then(auth => {
+        const puserInfoURL = auth.data.return_url;                  // 등록조회요청 URL
         const params = {
-            PCD_CST_ID: r.data.cst_id,                     // 리턴 받은 cst_id Token
-            PCD_CUST_KEY: r.data.custKey,                  // 리턴 받은 custKey Token
-            PCD_AUTH_KEY: r.data.AuthKey,                  // 리턴 받은 AuthKey Token
-            PCD_PAYCHK_FLAG: 'Y',                          // 결과조회 여부(Y|N)
-            PCD_PAY_TYPE: req.body.PCD_PAY_TYPE,           // 결제수단
-            PCD_REGULER_FLAG: req.body.PCD_REGULER_FLAG,   // 월 중복결제 방지 (사용: Y, 그 외: N)
-            PCD_PAY_YEAR: req.body.PCD_PAY_YEAR,           // 결제 구분 년도 (PCD_REGULER_FLAG: 'Y' 일 때 필수)
-            PCD_PAY_MONTH: req.body.PCD_PAY_MONTH,         // 결제 구분 월 (PCD_REGULER_FLAG: 'Y' 일 때 필수)
-            PCD_PAY_OID: req.body.PCD_PAY_OID,             // 주문번호
-            PCD_PAY_DATE: req.body.PCD_PAY_DATE            // 결제요청일자 (YYYYMMDD)
+            PCD_CST_ID: auth.data.cst_id,                           // 리턴 받은 cst_id Token
+            PCD_CUST_KEY: auth.data.custKey,                        // 리턴 받은 custKey Token
+            PCD_AUTH_KEY: auth.data.AuthKey,                        // 리턴 받은 AuthKey Token
+            PCD_PAYER_ID: req.body.PCD_PAYER_ID || '',              // 결제자 고유 ID (빌링키)
         }
-
-        post(paycheckURL, JSON.stringify(params), {
+        post(puserInfoURL, JSON.stringify(params), {
             headers: {
                 'content-type': 'application/json',
-                'referer': process.env.PCD_HTTP_REFERER  // API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
+                'referer': process.env.PCD_HTTP_REFERER
             }
-        })
-            .then(r2 => {
-                console.log(r2.data);
-                res.json(r2.data);
-            })
-            .catch(err => console.error(err));
+        }).then(response => {
+            const returned = response.data;
+            console.log(returned);
+            const data = {};
+            if (returned.PCD_PAY_RST !== '') {
+                data.PCD_PAY_RST = returned.PCD_PAY_RST;                             // 요청 결과 (success | error)
+                data.PCD_PAY_CODE = returned.PCD_PAY_CODE;                           // 요청 결과 코드
+                data.PCD_PAY_MSG = returned.PCD_PAY_MSG;                               // 요청 결과 메세지
+                data.PCD_PAYER_ID = returned.PCD_PAYER_ID;                           // 결제자 고유 ID (빌링키)
+                data.PCD_PAY_TYPE = returned.PCD_PAY_TYPE || '';                     // 결제수단 (transfer | card)
+                data.PCD_PAY_WORK = returned.PCD_PAY_WORK || '';                     // 요청 작업 구분 (등록조회 : PUSERINFO)
+                data.PCD_PAY_BANKACCTYPE = returned.PCD_PAY_BANKACCTYPE || '';       // 고객 구분 (법인 | 개인 or 개인사업자)
+                data.PCD_PAYER_NAME = returned.PCD_PAYER_NAME || '';                 // 결제자 이름
+                data.PCD_PAYER_HP = returned.PCD_PAYER_HP || '';                     // 결제자 휴대전화번호
+
+                if (returned.PCD_PAY_TYPE === 'card') {
+                    data.PCD_PAYER_HP = returned.PCD_PAYER_HP || '';                 // 카드사 코드
+                    data.PCD_PAY_CARDNAME = returned.PCD_PAY_CARDNAME || '';         // 카드사명
+                    data.PCD_PAY_CARDNUM = returned.PCD_PAY_CARDNUM || '';           // 카드번호
+                } else if (returned.PCD_PAY_TYPE === 'transfer') {
+                    data.PCD_PAY_BANK = returned.PCD_PAY_BANK || '';                 //은행코드
+                    data.PCD_PAY_BANKNAME = returned.PCD_PAY_BANKNAME || '';         //은행명
+                    data.PCD_PAY_BANKNUM = returned.PCD_PAY_BANKNUM || '';           //계좌번호
+                }
+            } else {
+                data.PCD_PAY_RST = "error";                           // 요청 결과 (success | error)
+                data.PCD_PAY_CODE = "";                               // 요청 결과 코드
+                data.PCD_PAY_MSG = "요청결과 수신 실패";                  // 요청 결과 메세지
+                data.PCD_PAY_TYPE = "";                               // 결제수단
+                data.PCD_PAYER_ID = "";                               // 결제자 고유 ID (빌링키)
+                data.PCD_PAY_BANKACCTYPE = "";                        // 고객 구분 (법인 | 개인 or 개인사업자)
+                data.PCD_PAYER_ID = "";                               // 결제자 고유 ID (빌링키)
+                data.PCD_PAYER_NAME = "";                             // 결제자 이름
+                data.PCD_PAYER_HP = "";                               // 결제자 휴대전화번호
+            }
+            res.json(data);
+        }).catch(err => console.error(err));
     });
 });
 
 /*
- * 계좌 간편 단건결제 요청 REST
- * ref: http://docs.payple.kr/bank/pay/outline
+ * POST /payUserDel, 계좌/카드 등록해지 요청
  */
-router.post('/transferSimple', (req, res) => {
-    //(기존 가맹점인증 라우터 이용 - POST process.env.HOSTNAME/public_html/sample/node/auth)
-    //[계좌 간편 단건 결제요청]가맹점인증 요청변수: PCD_PAY_TYPE, PCD_SIMPLE_FLAG
-    post(process.env.HOSTNAME + '/node/auth', {
-        PCD_PAY_TYPE: 'transfer',                                // 결제 방법 (transfer | card)
-        PCD_SIMPLE_FLAG: 'Y'                                     // 간편결제 여부 (Y | N)
-    }).then(r => {
-        const transferURL = r.data.return_url;                   // 리턴 받은 결제결과 요청 URL
+router.post('/payUserDel', (req, res) => {
+    // 파트너인증 요청변수: PCD_PAY_WORK
+    post(process.env.HOSTNAME + '/node/auth', {PCD_PAY_WORK: 'PUSERDEL'}).then(auth => {
+        const puserDelURL = auth.data.return_url;                   // 등록해지 URL
         const params = {
-            PCD_CST_ID: r.data.cst_id,                           // 리턴 받은 cst_id Token
-            PCD_CUST_KEY: r.data.custKey,                        // 리턴 받은 custKey Token
-            PCD_AUTH_KEY: r.data.AuthKey,                        // 리턴 받은 AuthKey Token
-            PCD_PAY_TYPE: 'transfer',                            // 결제수단
-            PCD_PAYER_ID: req.body.PCD_PAYER_ID,                 // 결제자 고유ID
-            PCD_PAYER_NO: req.body.PCD_PAYER_NO,                 // 가맹점 회원 고유번호
-            PCD_PAYER_EMAIL: req.body.PCD_PAYER_EMAIL,           // 결제자 Email
-            PCD_PAY_OID: req.body.PCD_PAY_OID,                   // 주문번호
-            PCD_PAY_GOODS: req.body.PCD_PAY_GOODS,               // 결제 상품
-            PCD_PAY_TOTAL: req.body.PCD_PAY_TOTAL,               // 결제 금액
-            PCD_PAY_ISTAX: req.body.PCD_PAY_ISTAX || 'Y',        // 과세설정 (Default: Y, 과세:Y, 복합과세:Y, 비과세: N)
-            PCD_PAY_TAXTOTAL: req.body.PCD_PAY_TAXTOTAL,         // 복합과세(과세+면세) 주문건에 필요한 금액이며 가맹점에서 전송한 값을 부가세로 설정합니다. 과세 또는 비과세의 경우 사용하지 않습니다.
-            PCD_TAXSAVE_FLAG: req.body.PCD_TAXSAVE_FLAG || 'N',  // 현금영수증 발행여부 (Default:N, 발행: Y, 미발행: N)
-            PCD_SIMPLE_FLAG: 'Y',                                // 간편결제 여부 (Y | N)
-            PCD_TAXSAVE_TRADE: req.body.PCD_TAXSAVE_TRADE,       // personal(소득공제) | company(지출증빙)
-            PCD_TAXSAVE_IDNUM: req.body.PCD_TAXSAVE_IDNUM        // 현금영수증 발행 번호
-        }
-        post(transferURL, JSON.stringify(params), {
-            headers: {
-                'content-type': 'application/json',
-                'referer': process.env.PCD_HTTP_REFERER          // API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
-            }
-        })
-            .then(r2 => {
-                console.log(r2.data);
-                res.json(r2.data);
-            })
-            .catch(err => console.error(err));
-    });
-});
-
-/*
- * 계좌 간편 정기결제 요청 REST
- * ref: http://docs.payple.kr/bank/pay/outline
- */
-router.post('/transferReguler', (req, res) => {
-    //(기존 가맹점인증 라우터 이용 - POST process.env.HOSTNAME/public_html/sample/node/auth)
-    //[계좌 간편 정기결제]가맹점인증 요청변수: PCD_PAY_TYPE, PCD_SIMPLE_FLAG
-    post(process.env.HOSTNAME + '/node/auth', {
-        PCD_PAY_TYPE: 'transfer',                                // 결제 방법 (transfer | card)
-        PCD_SIMPLE_FLAG: 'Y'                                     // 간편결제 여부 (Y | N)
-    }).then(r => {
-        const transferURL = r.data.return_url;                   // 리턴 받은 결제결과 요청 URL
-        const params = {
-            PCD_CST_ID: r.data.cst_id,                           // 리턴 받은 cst_id Token
-            PCD_CUST_KEY: r.data.custKey,                        // 리턴 받은 custKey Token
-            PCD_AUTH_KEY: r.data.AuthKey,                        // 리턴 받은 AuthKey Token
-            PCD_PAY_TYPE: 'transfer',                            // 결제수단
-            PCD_PAYER_ID: req.body.PCD_PAYER_ID,                 // 결제자 고유ID
-            PCD_PAYER_NO: req.body.PCD_PAYER_NO,                 // 가맹점 회원 고유번호
-            PCD_PAYER_EMAIL: req.body.PCD_PAYER_EMAIL,           // 결제자 Email
-            PCD_PAY_OID: req.body.PCD_PAY_OID,                   // 주문번호
-            PCD_PAY_GOODS: req.body.PCD_PAY_GOODS,               // 결제 상품
-            PCD_PAY_TOTAL: req.body.PCD_PAY_TOTAL,               // 결제 금액
-            PCD_PAY_ISTAX: req.body.PCD_PAY_ISTAX || 'Y',        // 과세설정 (Default: Y, 과세:Y, 복합과세:Y, 비과세: N)
-            PCD_PAY_TAXTOTAL: req.body.PCD_PAY_TAXTOTAL,         // 복합과세(과세+면세) 주문건에 필요한 금액이며 가맹점에서 전송한 값을 부가세로 설정합니다. 과세 또는 비과세의 경우 사용하지 않습니다.
-            PCD_TAXSAVE_FLAG: req.body.PCD_TAXSAVE_FLAG || 'N',  // 현금영수증 발행여부 (Default:N, 발행: Y, 미발행: N)
-            PCD_REGULER_FLAG: 'Y',                               // 간편결제 여부 (Y | N)
-            PCD_PAY_YEAR: req.body.PCD_PAY_YEAR,                 // [정기결제] 구분 년도
-            PCD_PAY_MONTH: req.body.PCD_PAY_MONTH,               // [정기결제] 결제 구분 월
-            PCD_TAXSAVE_TRADE: req.body.PCD_TAXSAVE_TRADE,       // personal(소득공제) | company(지출증빙)
-            PCD_TAXSAVE_IDNUM: req.body.PCD_TAXSAVE_IDNUM        // 현금영수증 발행 번호
-        }
-        post(transferURL, JSON.stringify(params), {
-            headers: {
-                'content-type': 'application/json',
-                'referer': process.env.PCD_HTTP_REFERER          // API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
-            }
-        })
-            .then(r2 => {
-                console.log(r2.data);
-                res.json(r2.data);
-            })
-            .catch(err => console.error(err));
-    });
-});
-
-
-/*
- * 카드 간편 단건결제 요청 REST
- * ref: http://docs.payple.kr/card/pay/outline
- */
-router.post('/simplePayCard', (req, res) => {
-    //(기존 가맹점인증 라우터 이용 - POST process.env.HOSTNAME/public_html/sample/node/auth)
-    //[카드 간편 단건결제 요청]가맹점인증 요청변수: PCD_PAY_TYPE, PCD_SIMPLE_FLAG
-    post(process.env.HOSTNAME + '/node/auth', {
-        PCD_PAY_TYPE: 'card',                                    // 결제 방법 (transfer | card)
-        PCD_SIMPLE_FLAG: 'Y'                                     // 간편결제 여부 (Y | N)
-    }).then(r => {
-        const simplePayCardURL = r.data.return_url;              // 리턴 받은 결제결과 요청 URL
-        const params = {
-            PCD_CST_ID: r.data.cst_id,                           // 리턴 받은 cst_id Token
-            PCD_CUST_KEY: r.data.custKey,                        // 리턴 받은 custKey Token
-            PCD_AUTH_KEY: r.data.AuthKey,                        // 리턴 받은 AuthKey Token
-            PCD_PAY_TYPE: 'card',                                // 결제수단
-            PCD_PAYER_ID: req.body.PCD_PAYER_ID,                 // 결제자 고유ID
-            PCD_PAYER_NO: req.body.PCD_PAYER_NO,                 // 가맹점 회원 고유번호
-            PCD_PAYER_EMAIL: req.body.PCD_PAYER_EMAIL,           // 결제자 Email
-            PCD_PAY_OID: req.body.PCD_PAY_OID,                   // 주문번호
-            PCD_PAY_GOODS: req.body.PCD_PAY_GOODS,               // 결제 상품
-            PCD_PAY_TOTAL: req.body.PCD_PAY_TOTAL,               // 결제 금액
-            PCD_PAY_ISTAX: req.body.PCD_PAY_ISTAX || 'Y',        // 과세설정 (Default: Y, 과세:Y, 복합과세:Y, 비과세: N)
-            PCD_PAY_TAXTOTAL: req.body.PCD_PAY_TAXTOTAL,         // 복합과세(과세+면세) 주문건에 필요한 금액이며 가맹점에서 전송한 값을 부가세로 설정합니다. 과세 또는 비과세의 경우 사용하지 않습니다.
-            PCD_SIMPLE_FLAG: 'Y'                                 // 간편결제 여부 (Y | N)
-        }
-        post(simplePayCardURL, JSON.stringify(params), {
-            headers: {
-                'content-type': 'application/json',
-                'referer': process.env.PCD_HTTP_REFERER          // API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
-            }
-        })
-            .then(r2 => {
-                console.log(r2.data);
-                res.json(r2.data);
-            })
-            .catch(err => console.error(err));
-    });
-});
-
-
-/*
- * 카드 간편 정기결제 요청 REST
- * ref: http://docs.payple.kr/card/pay/outline
- */
-router.post('/regulerPayCard', (req, res) => {
-    //(기존 가맹점인증 라우터 이용 - POST process.env.HOSTNAME/public_html/sample/node/auth)
-    //[카드 간편 정기결제 요청]가맹점인증 요청변수: PCD_PAY_TYPE, PCD_SIMPLE_FLAG
-    post(process.env.HOSTNAME + '/node/auth', {
-        PCD_PAY_TYPE: 'card',                                    // 결제 방법 (transfer | card)
-        PCD_SIMPLE_FLAG: 'Y'                                     // 간편결제 여부 (Y | N)
-    }).then(r => {
-        const regulerPayCardURL = r.data.return_url;             // 리턴 받은 결제결과 요청 URL
-        const params = {
-            PCD_CST_ID: r.data.cst_id,                           // 리턴 받은 cst_id Token
-            PCD_CUST_KEY: r.data.custKey,                        // 리턴 받은 custKey Token
-            PCD_AUTH_KEY: r.data.AuthKey,                        // 리턴 받은 AuthKey Token
-            PCD_PAY_TYPE: 'card',                                // 결제수단
-            PCD_PAYER_ID: req.body.PCD_PAYER_ID,                 // 결제자 고유ID
-            PCD_PAYER_NO: req.body.PCD_PAYER_NO,                 // 가맹점 회원 고유번호
-            PCD_PAYER_EMAIL: req.body.PCD_PAYER_EMAIL,           // 결제자 Email
-            PCD_PAY_OID: req.body.PCD_PAY_OID,                   // 주문번호
-            PCD_PAY_GOODS: req.body.PCD_PAY_GOODS,               // 결제 상품
-            PCD_PAY_TOTAL: req.body.PCD_PAY_TOTAL,               // 결제 금액
-            PCD_PAY_ISTAX: req.body.PCD_PAY_ISTAX || 'Y',        // 과세설정 (Default: Y, 과세:Y, 복합과세:Y, 비과세: N)
-            PCD_PAY_TAXTOTAL: req.body.PCD_PAY_TAXTOTAL,         // 복합과세(과세+면세) 주문건에 필요한 금액이며 가맹점에서 전송한 값을 부가세로 설정합니다. 과세 또는 비과세의 경우 사용하지 않습니다.
-            PCD_REGULER_FLAG: 'Y',                               // 정기결제 여부 (Y | N)
-            PCD_PAY_YEAR: req.body.PCD_PAY_YEAR,                 // [정기결제] 구분 년도
-            PCD_PAY_MONTH: req.body.PCD_PAY_MONTH                // [정기결제] 결제 구분 월
-        }
-        post(regulerPayCardURL, JSON.stringify(params), {
-            headers: {
-                'content-type': 'application/json',
-                'referer': process.env.PCD_HTTP_REFERER          // API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
-            }
-        })
-            .then(r2 => {
-                console.log(r2.data);
-                res.json(r2.data);
-            })
-            .catch(err => console.error(err));
-    });
-});
-
-/*
- * 계좌/카드 등록해지 요청 REST
- * 계좌 ref: http://docs.payple.kr/bank/regist/cancel
- * 카드 ref: http://docs.payple.kr/card/regist/cancel
- */
-router.post('/puserDel', (req, res) => {
-    //(기존 가맹점인증 라우터 이용 - POST process.env.HOSTNAME/public_html/sample/node/auth)
-    //[카드 간편 정기결제 요청]가맹점인증 요청변수: PCD_PAY_WORK
-    post(process.env.HOSTNAME + '/node/auth', {
-        PCD_PAY_WORK: 'PUSERDEL'                                 // 등록카드 해지 API 사용할 때 필수
-    }).then(r => {
-        const puserDelURL = r.data.return_url;                   // 리턴 받은 결제결과 요청 URL
-        const params = {
-            PCD_CST_ID: r.data.cst_id,                           // 리턴 받은 cst_id Token
-            PCD_CUST_KEY: r.data.custKey,                        // 리턴 받은 custKey Token
-            PCD_AUTH_KEY: r.data.AuthKey,                        // 리턴 받은 AuthKey Token
-            PCD_PAYER_ID: req.body.PCD_PAYER_ID,                 // 결제자 고유ID
-            PCD_PAYER_NO: req.body.PCD_PAYER_NO,                 // 가맹점 회원 고유번호
+            PCD_CST_ID: auth.data.cst_id,                           // 리턴 받은 cst_id Token
+            PCD_CUST_KEY: auth.data.custKey,                        // 리턴 받은 custKey Token
+            PCD_AUTH_KEY: auth.data.AuthKey,                        // 리턴 받은 AuthKey Token
+            PCD_PAYER_ID: req.body.PCD_PAYER_ID || '',              // 결제자 고유 ID (빌링키)
         }
         post(puserDelURL, JSON.stringify(params), {
             headers: {
                 'content-type': 'application/json',
-                'referer': process.env.PCD_HTTP_REFERER          // API 서버를 따로 두고 있는 경우, Referer 에 가맹점의 도메인 고정
+                'referer': process.env.PCD_HTTP_REFERER
             }
-        })
-            .then(r2 => {
-                console.log(r2.data);
-                res.json(r2.data);
-            })
-            .catch(err => console.error(err));
+        }).then(response => {
+            const returned = response.data;
+            const data = {};
+            if (returned.PCD_PAY_RST !== '') {
+                data.PCD_PAY_RST = returned.PCD_PAY_RST;              // 요청 결과 (success | error)
+                data.PCD_PAY_CODE = returned.PCD_PAY_CODE;            // 요청 결과 코드
+                data.PCD_PAY_MSG = returned.PCD_PAY_MSG;                // 요청 결과 메세지
+                data.PCD_PAY_TYPE = returned.PCD_PAY_TYPE;            // 결제수단 (transfer | card)
+                data.PCD_PAY_WORK = returned.PCD_PAY_WORK;            // 요청 작업 구분 (등록해지 : PUSERDEL)
+                data.PCD_PAYER_ID = returned.PCD_PAYER_ID;            // 결제자 고유 ID (빌링키)
+            } else {
+                data.PCD_PAY_RST = "error";                           // 요청 결과 (success | error)
+                data.PCD_PAY_CODE = "";                               // 요청 결과 코드
+                data.PCD_PAY_MSG = "요청결과 수신 실패";                  // 요청 결과 메세지
+                data.PCD_PAY_TYPE = "";                               // 결제수단
+                data.PCD_PAY_WORK = "PUSERDEL";                       // 요청 작업 구분 (등록해지 : PUSERDEL)
+                data.PCD_PAYER_ID = "";                               // 결제자 고유 ID (빌링키)
+            }
+            res.json(data);
+        }).catch(err => console.error(err));
     });
 });
 
+/*
+ * POST /paySimpleCardSend, 카드 정기결제 재결제
+ */
+router.post('/paySimpleCardSend', (req, res) => {
+    // 파트너인증 요청변수: PCD_PAY_TYPE, PCD_SIMPLE_FLAG
+    post(process.env.HOSTNAME + '/node/auth', {PCD_PAY_TYPE: 'card', PCD_SIMPLE_FLAG: 'Y'}).then(auth => {
+        const payReqURL = auth.data.return_url;                         // 카드 정기결제 재결제 URL
+        const params = {
+            PCD_CST_ID: auth.data.cst_id,                               // 리턴 받은 cst_id Token
+            PCD_CUST_KEY: auth.data.custKey,                            // 리턴 받은 custKey Token
+            PCD_AUTH_KEY: auth.data.AuthKey,                            // 리턴 받은 AuthKey Token
+            PCD_PAY_TYPE: 'card',                                       // (필수) 결제수단 (card)
+            PCD_PAYER_ID: req.body.PCD_PAYER_ID || '',                  // (필수) 결제자 고유 ID (빌링키)
+            PCD_PAY_GOODS: req.body.PCD_PAY_GOODS || '',                // (필수) 상품명
+            PCD_SIMPLE_FLAG: 'Y',                                       // 간편결제 여부 (Y|N)
+            PCD_PAY_TOTAL: req.body.PCD_PAY_TOTAL || '',                // (필수) 결제요청금액
+            PCD_PAY_OID: req.body.PCD_PAY_OID || '',                    // 주문번호
+            PCD_PAYER_NO: req.body.PCD_PAYER_NO || '',                  // 결제자 고유번호 (파트너사 회원 회원번호)
+            PCD_PAYER_NAME: req.body.PCD_PAYER_NAME || '',              // 결제자 이름
+            PCD_PAYER_HP: req.body.PCD_PAYER_HP || '' || '',            // 결제자 휴대전화번호
+            PCD_PAYER_EMAIL: req.body.PCD_PAYER_EMAIL || '',            // 결제자 이메일
+            PCD_PAY_ISTAX: req.body.PCD_PAY_ISTAX || 'Y',               // 과세여부
+            PCD_PAY_TAXTOTAL: req.body.PCD_PAY_TAXTOTAL || '',          // 부가세(복합과세 적용 시)
+        }
+        post(payReqURL, JSON.stringify(params), {
+            headers: {
+                'content-type': 'application/json',
+                'referer': process.env.PCD_HTTP_REFERER
+            }
+        }).then(response => {
+            const returned = response.data;
+            const data = {};
+            if (returned.PCD_PAY_RST !== '') {
+                data.PCD_PAY_RST = returned.PCD_PAY_RST;                    // 요청 결과 (success | error)
+                data.PCD_PAY_CODE = returned.PCD_PAY_CODE;                  // 요청 결과 코드
+                data.PCD_PAY_MSG = returned.PCD_PAY_MSG;                    // 요청 결과 메시지
+                data.PCD_PAY_OID = returned.PCD_PAY_OID;                    // 주문번호
+                data.PCD_PAY_TYPE = returned.PCD_PAY_TYPE;                  // 결제수단 (card)
+                data.PCD_PAYER_NO = returned.PCD_PAYER_NO;                  // 결제자 고유번호 (파트너사 회원 회원번호)
+                data.PCD_PAYER_ID = returned.PCD_PAYER_ID;                  // 결제자 고유 ID (빌링키)
+                data.PCD_PAYER_NAME = returned.PCD_PAYER_NAME;              // 결제자 이름
+                data.PCD_PAYER_HP = returned.PCD_PAYER_HP;                  // 결제자 휴대전화번호
+                data.PCD_PAYER_EMAIL = returned.PCD_PAYER_EMAIL;            // 결제자 이메일
+                data.PCD_PAY_GOODS = returned.PCD_PAY_GOODS;                // 상품명
+                data.PCD_PAY_TOTAL = returned.PCD_PAY_TOTAL;                // 결제요청금액
+                data.PCD_PAY_TAXTOTAL = returned.PCD_PAY_TAXTOTAL;          // 부가세(복합과세 적용 시)
+                data.PCD_PAY_ISTAX = returned.PCD_PAY_ISTAX;                // 과세여부
+                data.PCD_PAY_TIME = returned.PCD_PAY_TIME;                  // 결제완료 시간
+                data.PCD_PAY_CARDNAME = returned.PCD_PAY_CARDNAME;          // 카드사명
+                data.PCD_PAY_CARDNUM = returned.PCD_PAY_CARDNUM;            // 카드번호
+                data.PCD_PAY_CARDTRADENUM = returned.PCD_PAY_CARDTRADENUM;  // 카드 거래번호
+                data.PCD_PAY_CARDAUTHNO = returned.PCD_PAY_CARDAUTHNO;      // 카드 승인번호
+                data.PCD_PAY_CARDRECEIPT = returned.PCD_PAY_CARDRECEIPT;    // 카드 매출전표 URL
+                data.PCD_SIMPLE_FLAG = returned.PCD_SIMPLE_FLAG;            // 간편결제 여부 (Y|N)
+            } else {
+                data.PCD_PAY_RST = "error";                                 // 요청 결과 (success | error)
+                data.PCD_PAY_CODE = "";                                     // 요청 결과 코드
+                data.PCD_PAY_MSG = "카드결제실패";                             // 요청 결과 메시지
+                data.PCD_PAY_OID = params.PCD_PAY_OID;                      // 주문번호
+                data.PCD_PAY_TYPE = params.PCD_PAY_TYPE;                    // 결제수단 (card)
+                data.PCD_PAYER_NO = params.PCD_PAYER_NO;                    // 결제자 고유번호 (파트너사 회원 회원번호)
+                data.PCD_PAYER_ID = params.PCD_PAYER_ID;                    // 결제자 고유 ID (빌링키)
+                data.PCD_PAYER_NAME = params.PCD_PAYER_NAME;                // 결제자 이름
+                data.PCD_PAYER_HP = params.PCD_PAYER_HP;                    // 결제자 휴대전화번호
+                data.PCD_PAYER_EMAIL = params.PCD_PAYER_EMAIL;              // 결제자 이메일
+                data.PCD_PAY_GOODS = params.PCD_PAY_GOODS;                  // 상품명
+                data.PCD_PAY_TOTAL = params.PCD_PAY_TOTAL;                  // 결제요청금액
+                data.PCD_PAY_TAXTOTAL = params.PCD_PAY_TAXTOTAL;            // 부가세(복합과세 적용 시)
+                data.PCD_PAY_ISTAX = params.PCD_PAY_ISTAX;                  // 과세여부
+                data.PCD_PAY_TIME = "";                                     // 결제완료 시간
+                data.PCD_PAY_CARDNAME = "";                                 // 카드사명
+                data.PCD_PAY_CARDNUM = "";                                  // 카드번호
+                data.PCD_PAY_CARDTRADENUM = "";                             // 카드 거래번호
+                data.PCD_PAY_CARDAUTHNO = "";                               // 카드 승인번호
+                data.PCD_PAY_CARDRECEIPT = "";                              // 카드 매출전표 URL
+                data.PCD_SIMPLE_FLAG = "Y";                                 // 간편결제 여부 (Y|N)
+            }
+            res.json(data);
+        }).catch(err => console.error(err));
+    });
+});
+
+
+/*
+ * POST /paySimpleSend, 계좌 정기결제 재결제
+ */
+router.post('/paySimpleSend', (req, res) => {
+    // 파트너인증 요청변수: PCD_SIMPLE_FLAG
+    post(process.env.HOSTNAME + '/node/auth', {PCD_SIMPLE_FLAG: 'Y'}).then(auth => {
+        const payReqURL = auth.data.return_url;                         // 카드 정기결제 재결제 URL
+        const params = {
+            PCD_CST_ID: auth.data.cst_id,                               // 리턴 받은 cst_id Token
+            PCD_CUST_KEY: auth.data.custKey,                            // 리턴 받은 custKey Token
+            PCD_AUTH_KEY: auth.data.AuthKey,                            // 리턴 받은 AuthKey Token
+            PCD_PAY_TYPE: 'transfer',                                   // (필수) 결제수단 (transfer)
+            PCD_PAYER_ID: req.body.PCD_PAYER_ID || '',                  // (필수) 결제자 고유 ID (빌링키)
+            PCD_PAY_GOODS: req.body.PCD_PAY_GOODS || '',                // (필수) 상품명
+            PCD_SIMPLE_FLAG: 'Y',                                       // 간편결제 여부 (Y|N)
+            PCD_PAY_TOTAL: req.body.PCD_PAY_TOTAL || '',                // (필수) 결제요청금액
+            PCD_PAY_OID: req.body.PCD_PAY_OID || '',                    // 주문번호
+            PCD_PAYER_NO: req.body.PCD_PAYER_NO || '',                  // 결제자 고유번호 (파트너사 회원 회원번호)
+            PCD_PAYER_NAME: req.body.PCD_PAYER_NAME || '',              // 결제자 이름
+            PCD_PAYER_HP: req.body.PCD_PAYER_HP || '' || '',            // 결제자 휴대전화번호
+            PCD_PAYER_EMAIL: req.body.PCD_PAYER_EMAIL || '',            // 결제자 이메일
+            PCD_PAY_ISTAX: req.body.PCD_PAY_ISTAX || 'Y',               // 과세여부
+            PCD_PAY_TAXTOTAL: req.body.PCD_PAY_TAXTOTAL || '',          // 부가세(복합과세 적용 시)
+            PCD_TAXSAVE_FLAG: req.body.PCD_TAXSAVE_FLAG || '',          // 현금영수증 발행 Y|N
+            PCD_TAXSAVE_TRADE: req.body.PCD_TAXSAVE_TRADE || '',        // 현금영수증 발행 타입 (personal:소득공제 | company:지출증빙)
+            PCD_TAXSAVE_IDNUM: req.body.PCD_TAXSAVE_IDNUM || '',        // 현금영수증 발행대상 번호
+        }
+        post(payReqURL, JSON.stringify(params), {
+            headers: {
+                'content-type': 'application/json',
+                'referer': process.env.PCD_HTTP_REFERER
+            }
+        }).then(response => {
+            const returned = response.data;
+            const data = {};
+            if (returned.PCD_PAY_RST !== '') {
+                data.PCD_PAY_RST = returned.PCD_PAY_RST;                    // 요청 결과 (success | error)
+                data.PCD_PAY_CODE = returned.PCD_PAY_CODE;                  // 요청 결과 코드
+                data.PCD_PAY_MSG = returned.PCD_PAY_MSG;                    // 요청 결과 메시지
+                data.PCD_PAY_OID = returned.PCD_PAY_OID;                    // 주문번호
+                data.PCD_PAY_TYPE = returned.PCD_PAY_TYPE;                  // 결제수단 (card)
+                data.PCD_PAYER_NO = returned.PCD_PAYER_NO;                  // 결제자 고유번호 (파트너사 회원 회원번호)
+                data.PCD_PAYER_ID = returned.PCD_PAYER_ID;                  // 결제자 고유 ID (빌링키)
+                data.PCD_PAYER_NAME = returned.PCD_PAYER_NAME;              // 결제자 이름
+                data.PCD_PAYER_HP = returned.PCD_PAYER_HP;                  // 결제자 휴대전화번호
+                data.PCD_PAYER_EMAIL = returned.PCD_PAYER_EMAIL;            // 결제자 이메일
+                data.PCD_PAY_GOODS = returned.PCD_PAY_GOODS;                // 상품명
+                data.PCD_PAY_TOTAL = returned.PCD_PAY_TOTAL;                // 결제요청금액
+                data.PCD_PAY_TAXTOTAL = returned.PCD_PAY_TAXTOTAL;          // 부가세(복합과세 적용 시)
+                data.PCD_PAY_ISTAX = returned.PCD_PAY_ISTAX;                // 과세여부
+                data.PCD_PAY_TIME = returned.PCD_PAY_TIME;                  // 결제완료 시간
+                data.PCD_PAY_BANK = returned.PCD_PAY_BANK;                  // 은행코드
+                data.PCD_PAY_BANKNAME = returned.PCD_PAY_BANKNAME;          // 은행명
+                data.PCD_PAY_BANKNUM = returned.PCD_PAY_BANKNUM;            // 계좌번호
+                data.PCD_TAXSAVE_FLAG = returned.PCD_TAXSAVE_FLAG;          // 현금영수증 발행요청 (Y|N)
+                data.PCD_TAXSAVE_RST = returned.PCD_TAXSAVE_RST;            // 현금영수증 발행결과 (Y|N)
+                data.PCD_TAXSAVE_MGTNUM = returned.PCD_TAXSAVE_MGTNUM;      // 현금영수증 발행된 국세청 발행번호
+                data.PCD_SIMPLE_FLAG = returned.PCD_SIMPLE_FLAG;            // 간편결제 여부 (Y|N)
+            } else {
+                data.PCD_PAY_RST = "error";                                 // 요청 결과 (success | error)
+                data.PCD_PAY_CODE = "";                                     // 요청 결과 코드
+                data.PCD_PAY_MSG = "출금요청실패";                             // 요청 결과 메시지
+                data.PCD_PAY_OID = params.PCD_PAY_OID;                      // 주문번호
+                data.PCD_PAY_TYPE = params.PCD_PAY_TYPE;                    // 결제수단 (transfer)
+                data.PCD_PAYER_NO = params.PCD_PAYER_NO;                    // 결제자 고유번호 (파트너사 회원 회원번호)
+                data.PCD_PAYER_ID = params.PCD_PAYER_ID;                    // 결제자 고유 ID (빌링키)
+                data.PCD_PAYER_NAME = params.PCD_PAYER_NAME;                // 결제자 이름
+                data.PCD_PAYER_HP = params.PCD_PAYER_HP;                    // 결제자 휴대전화번호
+                data.PCD_PAYER_EMAIL = params.PCD_PAYER_EMAIL;              // 결제자 이메일
+                data.PCD_PAY_GOODS = params.PCD_PAY_GOODS;                  // 상품명
+                data.PCD_PAY_TOTAL = params.PCD_PAY_TOTAL;                  // 결제요청금액
+                data.PCD_PAY_TAXTOTAL = params.PCD_PAY_TAXTOTAL;            // 부가세(복합과세 적용 시)
+                data.PCD_PAY_ISTAX = params.PCD_PAY_ISTAX;                  // 과세여부
+                data.PCD_PAY_BANK = "";                                     // 은행코드
+                data.PCD_PAY_BANKNAME = "";                                 // 은행명
+                data.PCD_PAY_BANKNUM = "";                                  // 계좌번호
+                data.PCD_PAY_TIME = "";                                     // 결제완료 시간
+                data.PCD_TAXSAVE_FLAG = "";                                 // 현금영수증 발행요청 (Y|N)
+                data.PCD_TAXSAVE_RST = "N";                                 // 현금영수증 발행결과 (Y|N)
+                data.PCD_TAXSAVE_MGTNUM = "";                               // 현금영수증 발행된 국세청 발행번호
+            }
+            res.json(data);
+        }).catch(err => console.error(err));
+    });
+});
+
+/*
+ * POST /linkReg, URL링크결제 생성
+ */
+router.post('/linkReg', (req, res) => {
+    // 파트너인증 요청변수: PCD_PAY_WORK
+    post(process.env.HOSTNAME + '/node/auth', {PCD_PAY_WORK: 'LINKREG'}).then(auth => {
+        const transferURL = auth.data.return_url;                       // 리턴 받은 결제결과 요청 URL
+        const params = {
+            PCD_CST_ID: auth.data.cst_id,                               // 리턴 받은 cst_id Token
+            PCD_CUST_KEY: auth.data.custKey,                            // 리턴 받은 custKey Token
+            PCD_AUTH_KEY: auth.data.AuthKey,                            // 리턴 받은 AuthKey Token
+            PCD_PAY_WORK: req.body.PCD_PAY_WORK || 'LINKREG',           // 리턴 받은 AuthKey Token
+            PCD_PAY_TYPE: req.body.PCD_PAY_TYPE || 'transfer',          // (필수) 결제수단 (transfer | card)
+            PCD_PAY_GOODS: req.body.PCD_PAY_GOODS || '',                // (필수) 상품명
+            PCD_PAY_TOTAL: req.body.PCD_PAY_TOTAL || '',                // (필수) 결제요청금액
+            PCD_PAY_ISTAX: req.body.PCD_PAY_ISTAX || 'Y',               // 과세여부
+            PCD_PAY_TAXTOTAL: req.body.PCD_PAY_TAXTOTAL || '',          // 부가세(복합과세 적용 시)
+            PCD_TAXSAVE_FLAG: req.body.PCD_TAXSAVE_FLAG || '',          // 현금영수증 발행요청 (Y|N)
+            PCD_LINK_EXPIREDATE: req.body.PCD_LINK_EXPIREDATE || '',    // URL 결제 만료일
+        }
+        post(transferURL, JSON.stringify(params), {
+            headers: {
+                'content-type': 'application/json',
+                'referer': process.env.PCD_HTTP_REFERER
+            }
+        }).then(response => {
+            const returned = response.data;
+            const data = {};
+            if (returned.PCD_LINK_RST !== '') {
+                data.PCD_LINK_RST = returned.PCD_LINK_RST;                     // 요청 결과 (success)
+                data.PCD_LINK_MSG = returned.PCD_LINK_MSG;                     // 요청 결과 메세지
+                data.PCD_PAY_TYPE = params.PCD_PAY_TYPE;                       // 결제수단 (transfer | card)
+                data.PCD_PAY_GOODS = returned.PCD_PAY_GOODS;                   // 상품명
+                data.PCD_PAY_TOTAL = returned.PCD_PAY_TOTAL;                   // 결제요청금액
+                data.PCD_PAY_ISTAX = returned.PCD_PAY_ISTAX;                   // 과세여부
+                data.PCD_PAY_TAXTOTAL = returned.PCD_PAY_TAXTOTAL;             // 부가세(복합과세 적용 시)
+                data.PCD_TAXSAVE_FLAG = returned.PCD_TAXSAVE_FLAG;             // 현금영수증 발행요청 (Y|N)
+                data.PCD_LINK_EXPIREDATE = returned.PCD_LINK_EXPIREDATE;       // URL 결제 만료일
+                data.PCD_LINK_KEY = returned.PCD_LINK_KEY;                     // 링크요청 키
+                data.PCD_LINK_URL = returned.PCD_LINK_URL;                     // 링크결제 URL
+                data.PCD_LINK_MEMO = returned.PCD_LINK_MEMO;                   // 링크결제 메모
+            } else {
+                data.PCD_LINK_RST = "error";                	        	   // 요청 결과 (error)
+                data.PCD_PAY_TYPE = params.PCD_PAY_TYPE;                       // 결제수단 (transfer | card)
+                data.PCD_LINK_MSG = "요청결과 수신 실패";                           // 요청 결과 메세지
+                data.PCD_PAY_GOODS = "";                		        	   // 상품명
+                data.PCD_PAY_TOTAL = "";                		        	   // 결제요청금액
+                data.PCD_LINK_URL = "";             			               // 현금영수증 발행요청 (Y|N)
+                data.PCD_LINK_MEMO = "";                		        	   // 링크결제 URL
+            }
+            res.json(data);
+        }).catch(err => console.error(err));
+    });
+});
 
 /* Oid 생성 함수
  * 리턴 예시: test202105281622170718461
@@ -527,7 +769,6 @@ const createOid = () => {
     now_month = (now_month < 10) ? '0' + now_month : now_month;
     now_day = (now_day < 10) ? '0' + now_day : now_day;
     return 'test' + now_year + now_month + now_day + now_date.getTime();
-
 };
 
 
