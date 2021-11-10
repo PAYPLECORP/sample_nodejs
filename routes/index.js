@@ -119,12 +119,12 @@ router.post('/auth', (req, res, next) => {
     const params = {
         cst_id: process.env.CST_ID,                        // 파트너 ID (실결제시 발급받은 운영ID를 작성하시기 바랍니다.)
         custKey: process.env.CUST_KEY,                     // 파트너 인증키 (실결제시 발급받은 운영Key를 작성하시기 바랍니다.)
-        ...caseParams                                      // 상황별 파트너 인증 파라미터 구조분해
+        ...caseParams                                      // 상황별 파트너 인증 파라미터 구조 분해 할당
     };
     /*  ※ Referer 설정 방법
-	TEST : referer에는 테스트 결제창을 띄우는 도메인을 넣어주셔야합니다. 결제창을 띄울 도메인과 referer값이 다르면 무한로딩이 발생합니다.
+	TEST : referer에는 테스트 결제창을 띄우는 도메인을 넣어주셔야합니다. 결제창을 띄울 도메인과 referer값이 다르면 [AUTH0007] 응답이 발생합니다.
 	REAL : referer에는 가맹점 도메인으로 등록된 도메인을 넣어주셔야합니다.
-		   다른 도메인을 넣으시면 [AUTH0004] 에러가 발생합니다.
+		   다른 도메인을 넣으시면 [AUTH0004] 응답이 발생합니다.
 		   또한, TEST에서와 마찬가지로 결제창을 띄우는 도메인과 같아야 합니다.
     */
     post(authURL, JSON.stringify(params), {
