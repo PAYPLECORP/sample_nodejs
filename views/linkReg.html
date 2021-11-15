@@ -46,6 +46,21 @@
                     },
                 });
             });
+            /*
+             #PCD_PAY_TYPE: 결제수단
+             #card_ver_view: 카드 세부 결제방식 view
+         */
+            $("#PCD_PAY_TYPE").on("change", function(e) {
+                e.preventDefault();
+
+                var this_val = $(this).val();
+
+                if (this_val === "card") {
+                    $("#card_ver_view").css("display", "");
+                } else {
+                    $("#card_ver_view").css("display", "none");
+                }
+            });
         });
     </script>
     <style>
@@ -76,13 +91,22 @@
             <table>
                 <tr>
                     <td>*결제수단</td>
-                    <td> :
-                        <select name="PCD_PAY_TYPE" id="PCD_PAY_TYPE" required>
-                            <option value="transfer|card">계좌+카드</option>
-                            <option value="transfer">계좌이체결제</option>
-                            <option value="card">신용카드</option>
-                        </select>
-                    </td>
+                    <td>
+                        :
+                        <span>
+                            <select id="PCD_PAY_TYPE" name="PCD_PAY_TYPE">
+                                <option value="transfer|card">계좌+카드</option>
+                                <option value="transfer">계좌이체결제</option>
+                                <option value="card">신용카드</option>
+                            </select>
+                        </span>
+                        <span id="card_ver_view" style="display: none">
+                            <select id="PCD_CARD_VER" name="PCD_CARD_VER">
+                                <option value="01+02">간편/정기+앱카드</option>
+                                <option value="01">간편/정기(빌링키결제)</option>
+                                <option value="02">앱카드</option>
+                            </select>
+                        </span>
                 </tr>
                 <tr>
                     <td>*상품명</td>

@@ -718,6 +718,7 @@ router.post('/linkReg', (req, res) => {
             PCD_PAY_TYPE: req.body.PCD_PAY_TYPE || 'transfer',          // (필수) 결제수단 (transfer | card)
             PCD_PAY_GOODS: req.body.PCD_PAY_GOODS || '',                // (필수) 상품명
             PCD_PAY_TOTAL: req.body.PCD_PAY_TOTAL || '',                // (필수) 결제요청금액
+            PCD_CARD_VER: req.body.PCD_CARD_VER || '',                  // 결제수단
             PCD_PAY_ISTAX: req.body.PCD_PAY_ISTAX || 'Y',               // 과세여부
             PCD_PAY_TAXTOTAL: req.body.PCD_PAY_TAXTOTAL || '',          // 부가세(복합과세 적용 시)
             PCD_TAXSAVE_FLAG: req.body.PCD_TAXSAVE_FLAG || '',          // 현금영수증 발행요청 (Y|N)
@@ -736,6 +737,7 @@ router.post('/linkReg', (req, res) => {
                 data.PCD_LINK_MSG = returned.PCD_LINK_MSG;                     // 요청 결과 메세지
                 data.PCD_PAY_TYPE = params.PCD_PAY_TYPE;                       // 결제수단 (transfer | card)
                 data.PCD_PAY_GOODS = returned.PCD_PAY_GOODS;                   // 상품명
+                data.PCD_PAY_TYPE = returned.PCD_PAY_TYPE;                     // 결제수단
                 data.PCD_PAY_TOTAL = returned.PCD_PAY_TOTAL;                   // 결제요청금액
                 data.PCD_PAY_ISTAX = returned.PCD_PAY_ISTAX;                   // 과세여부
                 data.PCD_PAY_TAXTOTAL = returned.PCD_PAY_TAXTOTAL;             // 부가세(복합과세 적용 시)
@@ -744,6 +746,7 @@ router.post('/linkReg', (req, res) => {
                 data.PCD_LINK_KEY = returned.PCD_LINK_KEY;                     // 링크요청 키
                 data.PCD_LINK_URL = returned.PCD_LINK_URL;                     // 링크결제 URL
                 data.PCD_LINK_MEMO = returned.PCD_LINK_MEMO;                   // 링크결제 메모
+                if (returned.PCD_PAY_TYPE === 'card') data.PCD_CARD_VER = returned.PCD_CARD_VER // 카드 세부 결제 방식
             } else {
                 data.PCD_LINK_RST = "error";                	        	   // 요청 결과 (error)
                 data.PCD_PAY_TYPE = params.PCD_PAY_TYPE;                       // 결제수단 (transfer | card)
