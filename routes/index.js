@@ -714,7 +714,7 @@ router.post('/linkReg', (req, res) => {
             PCD_CST_ID: auth.data.cst_id,                               // 리턴 받은 cst_id Token
             PCD_CUST_KEY: auth.data.custKey,                            // 리턴 받은 custKey Token
             PCD_AUTH_KEY: auth.data.AuthKey,                            // 리턴 받은 AuthKey Token
-            PCD_PAY_WORK: req.body.PCD_PAY_WORK || 'LINKREG',           // 리턴 받은 AuthKey Token
+            PCD_PAY_WORK: 'LINKREG',                                    // (필수) 요청 작업 구분 (URL링크결제 : LINKREG)
             PCD_PAY_TYPE: req.body.PCD_PAY_TYPE || 'transfer',          // (필수) 결제수단 (transfer | card)
             PCD_PAY_GOODS: req.body.PCD_PAY_GOODS || '',                // (필수) 상품명
             PCD_PAY_TOTAL: req.body.PCD_PAY_TOTAL || '',                // (필수) 결제요청금액
