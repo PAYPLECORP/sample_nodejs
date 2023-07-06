@@ -5,6 +5,13 @@
 새로운 비즈니스모델과 서비스를 지원하기 위해 다양한 결제방식을 제공합니다.
 <br><br>
 
+
+## Update (2023.07.06)
+결제창 호출 요청 전 프로세스인 파트너 인증 방식이 새롭게 변경되어 코드에 반영되었습니다!<br>
+이제 클라이언트 단에서 키 값 하나로(clientKey) 더 빠르고 쉬운 파트너 인증을 통한 결제창 호출을 할 수 있습니다.🧑‍💻
+<br><br>
+
+
 ## Documentation
 
 📂 /sample_nodejs/**.env.json** 계정 관리 파일 ([계정발급 방법](https://developer.payple.kr/quick/account))<br>
