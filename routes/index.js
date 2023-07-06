@@ -24,6 +24,7 @@ router.get('/', (req, res) => {
 */
 router.post('/order_confirm', (req, res) => {
     const data = {
+        client_key: process.env.CLIENT_KEY|| '',            // 파트너 인증 - 클라이언트 키(clientKey)
         is_direct: req.body.is_direct || 'N',               // 결제창 방식 (DIRECT: Y | POPUP: N)
         pay_type: req.body.pay_type || 'transfer',          // 결제수단
         pay_work: req.body.pay_work || 'PAY',               // 결제요청방식
@@ -43,13 +44,8 @@ router.post('/order_confirm', (req, res) => {
         payer_authtype: req.body.payer_authtype || '',      // [간편결제/정기결제] 본인인증 방식 (sms : 문자인증 | pwd : 패스워드 인증)
         hostname: process.env.HOSTNAME                      // 결제창 호출 URL
     };
-    post(process.env.HOSTNAME + '/node/auth').then((response) => {
-        data.authKey = response.data.AuthKey;               // 파트너 인증 후 획득할 수 있는 인증토큰 값
-        data.payReqURL = response.data.return_url;          // 파트너 인증 후 (결제) 요청시 필요한 페이플 도메인 주소입니다.
-        res.render('order_confirm', data);
-    }).catch((error) => {
-        console.error(error);
-    });
+
+    res.render('order_confirm', data);
 });
 
 /*

@@ -106,11 +106,10 @@
             var card_ver = "{{card_ver}}";
             var payer_authtype = "{{payer_authtype}}";
             var is_direct = "{{is_direct}}";
-            var pcd_rst_url = "";
             var server_name = "{{hostname}}";
 
             // 결제창 방식 설정 - 팝업(상대경로), 다이렉트(절대경로)
-            pcd_rst_url = is_direct === 'Y' ? server_name + "/node/result" : "/node/result";
+            var pcd_rst_url = is_direct === 'Y' ? server_name + "/node/result" : "/node/result";
 
             var obj = {};
 
@@ -121,7 +120,7 @@
             obj.PCD_PAY_WORK = pay_work; // (필수) 결제요청 방식 (AUTH | PAY | CERT)
 
             // 카드결제 시 필수 (카드 세부 결제방식)
-            obj.PCD_CARD_VER = card_ver; // Default: 01 (01: 간편/정기결제, 02: 앱카드)
+            if (pay_type === 'card') obj.PCD_CARD_VER = card_ver; // Default: 01 (01: 간편/정기결제, 02: 앱카드)
 
             // # 결제요청 방식별(PCD_PAY_WORK) 파라미터 설정 
             /*
@@ -136,7 +135,6 @@
                 obj.PCD_PAYER_EMAIL = payer_email; // (선택) 결제자 이메일
                 obj.PCD_TAXSAVE_FLAG = taxsave_flag; // (선택) 현금영수증 발행요청 (Y|N)
                 obj.PCD_SIMPLE_FLAG = simple_flag; // (선택) 간편결제 여부 (Y|N)
-
             }
 
             /*
@@ -173,9 +171,7 @@
                     obj.PCD_PAY_ISTAX = pay_istax; // (선택) 과세여부
                     obj.PCD_PAY_OID = pay_oid; // (선택) 주문번호 (미입력 시 임의 생성)
                     obj.PCD_TAXSAVE_FLAG = taxsave_flag; // (선택) 현금영수증 발행요청 (Y|N)
-
                 }
-
             }
 
             /* DEFAULT SET 2 */
@@ -183,11 +179,8 @@
             obj.PCD_RST_URL = pcd_rst_url; // (필수) 결제(요청)결과 RETURN URL
             //obj.callbackFunction = getResult; // (선택) 결과를 받고자 하는 callback 함수명 (callback함수를 설정할 경우 PCD_RST_URL 이 작동하지 않음)
 
-            /* 파트너 인증시 받은 AuthKey 값 입력  */
-            obj.PCD_AUTH_KEY = "{{authKey}}";
-
-            /* 파트너 인증시 받은 return_url 값 입력  */
-            obj.PCD_PAY_URL = "{{payReqURL}}";
+            /* 파트너 인증 - 클라이언트 키(clientKey) */
+            obj.clientKey = "{{client_key}}";
 
             PaypleCpayAuthCheck(obj);
 
