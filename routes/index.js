@@ -42,6 +42,7 @@ router.post('/order_confirm', (req, res) => {
         pay_taxtotal: req.body.pay_taxtotal || '',          // 부가세(복합과세인 경우 필수)
         simple_flag: req.body.simple_flag || 'N',           // 간편결제 여부
         payer_authtype: req.body.payer_authtype || '',      // [간편결제/정기결제] 본인인증 방식 (sms : 문자인증 | pwd : 패스워드 인증)
+        pay_method_flag: req.body.pay_method_flag || '',    // 결제 수단 (appCard|naverPay|kakaoPay)
         hostname: process.env.HOSTNAME                      // 결제창 호출 URL
     };
 
@@ -148,6 +149,8 @@ router.post('/result', (req, res) => {
         pay_code: req.body.PCD_PAY_CODE || '',                    // 결제요청 결과 코드
         pay_msg: req.body.PCD_PAY_MSG || '',                      // 결제요청 결과 메세지
         pay_type: req.body.PCD_PAY_TYPE || '',                    // 결제수단 (transfer|card)
+        pay_method: req.body.PCD_PAY_METHOD || '',                // 결제 수단 (appCard|naverPay|kakaoPay)
+        easy_pay_method: req.body.PCD_EASY_PAY_METHOD || '',      // 간편결제 수단
         card_ver: req.body.PCD_CARD_VER || '',                    // 카드 세부 결제방식
         pay_work: req.body.PCD_PAY_WORK || '',                    // 결제요청 방식 (AUTH | PAY | CERT)
         auth_key: req.body.PCD_AUTH_KEY || '',                    // 결제요청 파트너 인증 토큰 값
@@ -178,7 +181,8 @@ router.post('/result', (req, res) => {
         pay_cardtradenum: req.body.PCD_PAY_CARDTRADENUM || '',    // 카드 거래번호
         pay_cardauthno: req.body.PCD_PAY_CARDAUTHNO || '',        // 카드 승인번호
         pay_cardreceipt: req.body.PCD_PAY_CARDRECEIPT || '',      // 카드 매출전표 URL
-        pay_cardtradenum: req.body.PCD_PAY_CARDTRADENUM || '',    // 카드 거래번호
+
+        tx_key: req.body.PCD_TX_KEY || '',                        // 거래 키
     }
 
     res.render('order_result', {...data, returnedData});
@@ -212,6 +216,9 @@ router.post('/payCertSend', (req, res, next) => {
             PCD_PAY_REQKEY: returned.PCD_PAY_REQKEY,                // (CERT방식) 최종 결제요청 승인키
             PCD_PAY_OID: returned.PCD_PAY_OID,                      // 주문번호
             PCD_PAY_TYPE: returned.PCD_PAY_TYPE,                    // 결제수단 (transfer|card)
+            PCD_PAY_METHOD: returned.PCD_PAY_METHOD || '',          // 결제 수단 (appCard|naverPay|kakaoPay)
+            PCD_EASY_PAY_METHOD: returned.PCD_EASY_PAY_METHOD || '', // 간편결제 수단
+            PCD_TX_KEY: returned.PCD_TX_KEY || '',                  // 거래 키
             PCD_PAYER_ID: returned.PCD_PAYER_ID,                    // 결제자 고유 ID (빌링키)
             PCD_PAYER_NO: returned.PCD_PAYER_NO,                    // 결제자 고유번호 (파트너사 회원 회원번호)
             PCD_PAYER_NAME: returned.PCD_PAYER_NAME,                // 결제자 이름
